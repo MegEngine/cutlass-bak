@@ -1,25 +1,27 @@
 /***************************************************************************************************
  * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without modification, are permitted
- * provided that the following conditions are met:
- *     * Redistributions of source code must retain the above copyright notice, this list of
- *       conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright notice, this list of
- *       conditions and the following disclaimer in the documentation and/or other materials
- *       provided with the distribution.
- *     * Neither the name of the NVIDIA CORPORATION nor the names of its contributors may be used
- *       to endorse or promote products derived from this software without specific prior written
- *       permission.
+ * Redistribution and use in source and binary forms, with or without
+ *modification, are permitted provided that the following conditions are met:
+ *     * Redistributions of source code must retain the above copyright notice,
+ *this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *notice, this list of conditions and the following disclaimer in the
+ *documentation and/or other materials provided with the distribution.
+ *     * Neither the name of the NVIDIA CORPORATION nor the names of its
+ *contributors may be used to endorse or promote products derived from this
+ *software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
- * FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL NVIDIA CORPORATION BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TOR (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ *AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ *IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ *DISCLAIMED. IN NO EVENT SHALL NVIDIA CORPORATION BE LIABLE FOR ANY DIRECT,
+ *INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ *DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+ *OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TOR (INCLUDING
+ *NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+ *EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  **************************************************************************************************/
 /* \file
@@ -31,12 +33,12 @@
 #include "cutlass/cutlass.h"
 
 #include "cutlass/gemm/device/gemm.h"
-#include "cutlass/gemm/device/gemm_complex.h"
-#include "cutlass/gemm/device/gemm_batched.h"
 #include "cutlass/gemm/device/gemm_array.h"
+#include "cutlass/gemm/device/gemm_batched.h"
+#include "cutlass/gemm/device/gemm_complex.h"
 #include "cutlass/gemm/device/gemm_universal_adapter.h"
-#include "cutlass/gemm/kernel/default_gemm_universal.h"
 #include "cutlass/gemm/kernel/default_gemm_planar_complex_universal.h"
+#include "cutlass/gemm/kernel/default_gemm_universal.h"
 
 #include "cutlass/library/library.h"
 #include "library_internal.h"
@@ -51,79 +53,82 @@ namespace library {
 template <typename Operator_>
 class GemmOperationBase : public Operation {
 public:
-  using Operator = Operator_;
-  using ElementA = typename Operator::ElementA;
-  using LayoutA = typename Operator::LayoutA;
-  using ElementB = typename Operator::ElementB;
-  using LayoutB = typename Operator::LayoutB;
-  using ElementC = typename Operator::ElementC;
-  using LayoutC = typename Operator::LayoutC;
-  using ElementAccumulator = typename Operator::ElementAccumulator;
-  using ElementCompute = typename Operator::EpilogueOutputOp::ElementCompute;
+    using Operator = Operator_;
+    using ElementA = typename Operator::ElementA;
+    using LayoutA = typename Operator::LayoutA;
+    using ElementB = typename Operator::ElementB;
+    using LayoutB = typename Operator::LayoutB;
+    using ElementC = typename Operator::ElementC;
+    using LayoutC = typename Operator::LayoutC;
+    using ElementAccumulator = typename Operator::ElementAccumulator;
+    using ElementCompute = typename Operator::EpilogueOutputOp::ElementCompute;
 
-  using OperatorArguments = typename Operator::Arguments;
+    using OperatorArguments = typename Operator::Arguments;
 
 protected:
-
-  /// 
-  GemmDescription description_;
+    ///
+    GemmDescription description_;
 
 public:
+    /// Constructor
+    GemmOperationBase(char const* name = "unknown_gemm") {
+        description_.name = name;
+        description_.provider = Provider::kCUTLASS;
+        description_.kind = OperationKind::kGemm;
+        description_.gemm_kind = GemmKind::kGemm;
 
-  /// Constructor
-  GemmOperationBase(char const *name = "unknown_gemm") {
+        description_.tile_description.threadblock_shape = make_Coord(
+                Operator::ThreadblockShape::kM, Operator::ThreadblockShape::kN,
+                Operator::ThreadblockShape::kK);
 
-    description_.name = name;
-    description_.provider = Provider::kCUTLASS;
-    description_.kind = OperationKind::kGemm;
-    description_.gemm_kind = GemmKind::kGemm;
+        description_.tile_description.threadblock_stages = Operator::kStages;
 
-    description_.tile_description.threadblock_shape = make_Coord(
-      Operator::ThreadblockShape::kM,
-      Operator::ThreadblockShape::kN,
-      Operator::ThreadblockShape::kK);
+        description_.tile_description.warp_count =
+                make_Coord(Operator::GemmKernel::WarpCount::kM,
+                           Operator::GemmKernel::WarpCount::kN,
+                           Operator::GemmKernel::WarpCount::kK);
 
-    description_.tile_description.threadblock_stages = Operator::kStages;
+        description_.tile_description.math_instruction.instruction_shape =
+                make_Coord(Operator::InstructionShape::kM,
+                           Operator::InstructionShape::kN,
+                           Operator::InstructionShape::kK);
 
-    description_.tile_description.warp_count = make_Coord(
-      Operator::GemmKernel::WarpCount::kM,
-      Operator::GemmKernel::WarpCount::kN,
-      Operator::GemmKernel::WarpCount::kK);
-    
-    description_.tile_description.math_instruction.instruction_shape = make_Coord(
-      Operator::InstructionShape::kM,
-      Operator::InstructionShape::kN,
-      Operator::InstructionShape::kK);
+        description_.tile_description.math_instruction.element_accumulator =
+                NumericTypeMap<ElementAccumulator>::kId;
 
-    description_.tile_description.math_instruction.element_accumulator = 
-      NumericTypeMap<ElementAccumulator>::kId;
+        description_.tile_description.math_instruction.opcode_class =
+                OpcodeClassMap<typename Operator::OperatorClass>::kId;
 
-    description_.tile_description.math_instruction.opcode_class = 
-      OpcodeClassMap<typename Operator::OperatorClass>::kId;
+        description_.tile_description.math_instruction.math_operation =
+                MathOperationMap<typename Operator::Operator>::kId;
 
-    description_.tile_description.math_instruction.math_operation =
-      MathOperationMap<typename Operator::Operator>::kId;
+        description_.tile_description.minimum_compute_capability =
+                ArchMap<typename Operator::ArchTag,
+                        typename Operator::OperatorClass>::kMin;
 
-    description_.tile_description.minimum_compute_capability = 
-      ArchMap<typename Operator::ArchTag, typename Operator::OperatorClass>::kMin;
+        description_.tile_description.maximum_compute_capability =
+                ArchMap<typename Operator::ArchTag,
+                        typename Operator::OperatorClass>::kMax;
 
-    description_.tile_description.maximum_compute_capability = 
-      ArchMap<typename Operator::ArchTag, typename Operator::OperatorClass>::kMax;
-    
-    description_.A = make_TensorDescription<ElementA, LayoutA>(Operator::kAlignmentA);
-    description_.B = make_TensorDescription<ElementB, LayoutB>(Operator::kAlignmentB);
-    description_.C = make_TensorDescription<ElementC, LayoutC>(Operator::kAlignmentC);
-    description_.element_epilogue = NumericTypeMap<ElementCompute>::kId;
+        description_.A = make_TensorDescription<ElementA, LayoutA>(
+                Operator::kAlignmentA);
+        description_.B = make_TensorDescription<ElementB, LayoutB>(
+                Operator::kAlignmentB);
+        description_.C = make_TensorDescription<ElementC, LayoutC>(
+                Operator::kAlignmentC);
+        description_.element_epilogue = NumericTypeMap<ElementCompute>::kId;
 
-    description_.split_k_mode = SplitKMode::kNone;
-    description_.transform_A = ComplexTransformMap<Operator::kTransformA>::kId;
-    description_.transform_B = ComplexTransformMap<Operator::kTransformB>::kId;
-  }
-  
-  /// Returns the description of the GEMM operation
-  virtual OperationDescription const & description() const {
-    return description_;
-  }
+        description_.split_k_mode = SplitKMode::kNone;
+        description_.transform_A =
+                ComplexTransformMap<Operator::kTransformA>::kId;
+        description_.transform_B =
+                ComplexTransformMap<Operator::kTransformB>::kId;
+    }
+
+    /// Returns the description of the GEMM operation
+    virtual OperationDescription const& description() const {
+        return description_;
+    }
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -131,180 +136,154 @@ public:
 template <typename Operator_>
 class GemmOperation : public GemmOperationBase<Operator_> {
 public:
+    using Operator = Operator_;
+    using ElementA = typename Operator::ElementA;
+    using LayoutA = typename Operator::LayoutA;
+    using ElementB = typename Operator::ElementB;
+    using LayoutB = typename Operator::LayoutB;
+    using ElementC = typename Operator::ElementC;
+    using LayoutC = typename Operator::LayoutC;
+    using ElementAccumulator = typename Operator::ElementAccumulator;
+    using ElementCompute = typename Operator::EpilogueOutputOp::ElementCompute;
 
-  using Operator = Operator_;
-  using ElementA = typename Operator::ElementA;
-  using LayoutA = typename Operator::LayoutA;
-  using ElementB = typename Operator::ElementB;
-  using LayoutB = typename Operator::LayoutB;
-  using ElementC = typename Operator::ElementC;
-  using LayoutC = typename Operator::LayoutC;
-  using ElementAccumulator = typename Operator::ElementAccumulator;
-  using ElementCompute = typename Operator::EpilogueOutputOp::ElementCompute;
-
-  using OperatorArguments = typename Operator::Arguments;
+    using OperatorArguments = typename Operator::Arguments;
 
 public:
-
-  /// Constructor
-  GemmOperation(char const *name = "unknown_gemm"): GemmOperationBase<Operator_>(name) {
-
-    this->description_.gemm_kind = GemmKind::kGemm;
-  }
+    /// Constructor
+    GemmOperation(char const* name = "unknown_gemm")
+            : GemmOperationBase<Operator_>(name) {
+        this->description_.gemm_kind = GemmKind::kGemm;
+    }
 
 protected:
+    /// Constructs the arguments structure given the configuration and arguments
+    static Status construct_arguments_(OperatorArguments& operator_args,
+                                       GemmConfiguration const* configuration) {
+        operator_args.problem_size = configuration->problem_size;
+        operator_args.ref_A = {nullptr, int(configuration->lda)};
+        operator_args.ref_B = {nullptr, int(configuration->ldb)};
+        operator_args.ref_C = {nullptr, int(configuration->ldc)};
+        operator_args.ref_D = {nullptr, int(configuration->ldd)};
+        operator_args.split_k_slices = configuration->split_k_slices;
 
-  /// Constructs the arguments structure given the configuration and arguments
-  static Status construct_arguments_(
-    OperatorArguments &operator_args,
-    GemmConfiguration const *configuration) {
-
-    operator_args.problem_size = configuration->problem_size;
-    operator_args.ref_A = {nullptr, int(configuration->lda)};
-    operator_args.ref_B = {nullptr, int(configuration->ldb)};
-    operator_args.ref_C = {nullptr, int(configuration->ldc)};
-    operator_args.ref_D = {nullptr, int(configuration->ldd)};
-    operator_args.split_k_slices = configuration->split_k_slices;
-
-    return Status::kSuccess;
-  }
-
-  /// Constructs the arguments structure given the configuration and arguments
-  static Status update_arguments_(
-    OperatorArguments &operator_args,
-    GemmArguments const *arguments) {
-
-    if (arguments->pointer_mode == ScalarPointerMode::kHost) {
-      typename Operator::EpilogueOutputOp::Params params(
-        *static_cast<ElementCompute const *>(arguments->alpha),
-        *static_cast<ElementCompute const *>(arguments->beta)
-      );
-      operator_args.epilogue = params;
-    }
-    else if (arguments->pointer_mode == ScalarPointerMode::kDevice){
-      typename Operator::EpilogueOutputOp::Params params(
-        static_cast<ElementCompute const *>(arguments->alpha),
-        static_cast<ElementCompute const *>(arguments->beta)
-      );
-      operator_args.epilogue = params; 
-    }
-    else {
-      return Status::kErrorInvalidProblem;
+        return Status::kSuccess;
     }
 
-    operator_args.ref_A.reset(static_cast<ElementA const *>(arguments->A));
-    operator_args.ref_B.reset(static_cast<ElementB const *>(arguments->B));
-    operator_args.ref_C.reset(static_cast<ElementC const *>(arguments->C));
-    operator_args.ref_D.reset(static_cast<ElementC *>(arguments->D));
+    /// Constructs the arguments structure given the configuration and arguments
+    static Status update_arguments_(OperatorArguments& operator_args,
+                                    GemmArguments const* arguments) {
+        if (arguments->pointer_mode == ScalarPointerMode::kHost) {
+            typename Operator::EpilogueOutputOp::Params params(
+                    *static_cast<ElementCompute const*>(arguments->alpha),
+                    *static_cast<ElementCompute const*>(arguments->beta));
+            operator_args.epilogue = params;
+        } else if (arguments->pointer_mode == ScalarPointerMode::kDevice) {
+            typename Operator::EpilogueOutputOp::Params params(
+                    static_cast<ElementCompute const*>(arguments->alpha),
+                    static_cast<ElementCompute const*>(arguments->beta));
+            operator_args.epilogue = params;
+        } else {
+            return Status::kErrorInvalidProblem;
+        }
 
-    return Status::kSuccess;
-  }
+        operator_args.ref_A.reset(static_cast<ElementA const*>(arguments->A));
+        operator_args.ref_B.reset(static_cast<ElementB const*>(arguments->B));
+        operator_args.ref_C.reset(static_cast<ElementC const*>(arguments->C));
+        operator_args.ref_D.reset(static_cast<ElementC*>(arguments->D));
+
+        return Status::kSuccess;
+    }
 
 public:
+    /// Returns success if the operation can proceed
+    virtual Status can_implement(void const* configuration_ptr,
+                                 void const* arguments_ptr) const {
+        GemmConfiguration const* configuration =
+                static_cast<GemmConfiguration const*>(configuration_ptr);
 
-  /// Returns success if the operation can proceed
-  virtual Status can_implement(
-    void const *configuration_ptr, 
-    void const *arguments_ptr) const {
+        GemmArguments const* arguments =
+                static_cast<GemmArguments const*>(arguments_ptr);
 
-    GemmConfiguration const *configuration = 
-      static_cast<GemmConfiguration const *>(configuration_ptr);
+        OperatorArguments args;
 
-    GemmArguments const *arguments = 
-      static_cast<GemmArguments const *>(arguments_ptr);
+        Status status = construct_arguments_(args, configuration);
 
-    OperatorArguments args;
+        if (status != Status::kSuccess) {
+            return status;
+        }
 
-    Status status = construct_arguments_(args, configuration);
+        status = update_arguments_(args, arguments);
 
-    if (status != Status::kSuccess) {
-      return status;
+        if (status != Status::kSuccess) {
+            return status;
+        }
+
+        return Operator::can_implement(args);
     }
 
-    status = update_arguments_(args, arguments);
-
-    if (status != Status::kSuccess) {
-      return status;
+    /// Gets the host-side workspace
+    virtual uint64_t get_host_workspace_size(void const* configuration) const {
+        return sizeof(Operator);
     }
 
-    return Operator::can_implement(args);
-  }
-  
-  /// Gets the host-side workspace
-  virtual uint64_t get_host_workspace_size(
-    void const *configuration) const {
+    /// Gets the device-side workspace
+    virtual uint64_t get_device_workspace_size(
+            void const* configuration_ptr) const {
+        OperatorArguments args;
 
-    return sizeof(Operator);
-  }
-  
-  /// Gets the device-side workspace
-  virtual uint64_t get_device_workspace_size(
-    void const *configuration_ptr) const {
+        Status status = construct_arguments_(
+                args, static_cast<GemmConfiguration const*>(configuration_ptr));
 
-    OperatorArguments args;
+        if (status != Status::kSuccess) {
+            return 0;
+        }
 
-    Status status = construct_arguments_(
-      args, 
-      static_cast<GemmConfiguration const *>(configuration_ptr));
-
-    if (status != Status::kSuccess) {
-      return 0;
+        return Operator::get_workspace_size(args);
     }
 
-    return Operator::get_workspace_size(args);
-  }
-  
-  /// Initializes the workspace
-  virtual Status initialize(
-    void const *configuration_ptr, 
-    void *host_workspace, 
-    void *device_workspace, 
-    cudaStream_t stream = nullptr) const {
+    /// Initializes the workspace
+    virtual Status initialize(void const* configuration_ptr,
+                              void* host_workspace, void* device_workspace,
+                              cudaStream_t stream = nullptr) const {
+        OperatorArguments args;
 
-    OperatorArguments args;
+        Status status = construct_arguments_(
+                args, static_cast<GemmConfiguration const*>(configuration_ptr));
 
-    Status status = construct_arguments_(
-      args, 
-      static_cast<GemmConfiguration const *>(configuration_ptr));
+        if (status != Status::kSuccess) {
+            return status;
+        }
 
-    if (status != Status::kSuccess) {
-      return status;
+        Operator* op = new (host_workspace) Operator;
+
+        return op->initialize(args, device_workspace, stream);
     }
 
-    Operator *op = new (host_workspace) Operator;
+    /// Runs the kernel
+    virtual Status run(void const* arguments_ptr, void* host_workspace,
+                       void* device_workspace = nullptr,
+                       cudaStream_t stream = nullptr) const {
+        OperatorArguments args;
 
-    return op->initialize(args, device_workspace, stream);
-  }
+        Status status = update_arguments_(
+                args, static_cast<GemmArguments const*>(arguments_ptr));
 
-  /// Runs the kernel
-  virtual Status run(
-    void const *arguments_ptr,
-    void *host_workspace, 
-    void *device_workspace = nullptr, 
-    cudaStream_t stream = nullptr) const {
+        if (status != Status::kSuccess) {
+            return status;
+        }
 
-    OperatorArguments args;
+        Operator* op = static_cast<Operator*>(host_workspace);
 
-    Status status = update_arguments_(
-      args, 
-      static_cast<GemmArguments const *>(arguments_ptr));
+        status = op->update(args, device_workspace);
 
-    if (status != Status::kSuccess) {
-      return status;
+        if (status != Status::kSuccess) {
+            return status;
+        }
+
+        return op->run(stream);
     }
 
-    Operator *op = static_cast<Operator *>(host_workspace);
-
-    status = op->update(args, device_workspace);
-
-    if (status != Status::kSuccess) {
-      return status;
-    }
-
-    return op->run(stream);
-  }
-
-  void print_operator_args(OperatorArguments &operator_args) const {
+    void print_operator_args(OperatorArguments& operator_args) const {
 #if 0
     std::cout << "GemmOperation::OperatorArguments" << std::endl;
     std::cout << "    problem_size: " << operator_args.problem_size.m() << ", "<< operator_args.problem_size.n() << "," <<  operator_args.problem_size.k() << std::endl;
@@ -319,7 +298,7 @@ public:
     std::cout << "  ref_C.data(): " << operator_args.ref_C.data() << std::endl;
     std::cout << "  ref_C.stride: " << operator_args.ref_C.stride(0) << std::endl;
 #endif
-  }
+    }
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -327,376 +306,327 @@ public:
 template <typename Operator_>
 class GemmBatchedOperation : public GemmOperationBase<Operator_> {
 public:
+    using Operator = Operator_;
+    using ElementA = typename Operator::ElementA;
+    using LayoutA = typename Operator::LayoutA;
+    using ElementB = typename Operator::ElementB;
+    using LayoutB = typename Operator::LayoutB;
+    using ElementC = typename Operator::ElementC;
+    using LayoutC = typename Operator::LayoutC;
+    using ElementAccumulator = typename Operator::ElementAccumulator;
+    using ElementCompute = typename Operator::EpilogueOutputOp::ElementCompute;
 
-  using Operator = Operator_;
-  using ElementA = typename Operator::ElementA;
-  using LayoutA = typename Operator::LayoutA;
-  using ElementB = typename Operator::ElementB;
-  using LayoutB = typename Operator::LayoutB;
-  using ElementC = typename Operator::ElementC;
-  using LayoutC = typename Operator::LayoutC;
-  using ElementAccumulator = typename Operator::ElementAccumulator;
-  using ElementCompute = typename Operator::EpilogueOutputOp::ElementCompute;
-
-  using OperatorArguments = typename Operator::Arguments;
-
-protected:
-
-  /// 
-  GemmDescription description_;
-
-public:
-
-  /// Constructor
-  GemmBatchedOperation(char const *name = "unknown_gemm"): GemmOperationBase<Operator_>(name) {
-
-    description_.gemm_kind = GemmKind::kBatched;
-  }
+    using OperatorArguments = typename Operator::Arguments;
 
 protected:
-
-  /// Constructs the arguments structure given the configuration and arguments
-  static Status construct_arguments_(
-    OperatorArguments &operator_args,
-    GemmBatchedConfiguration const *configuration) {
-
-    operator_args.problem_size = configuration->problem_size;
-    operator_args.ref_A = {nullptr, int(configuration->lda)};
-    operator_args.stride_A = configuration->batch_stride_A;
-    operator_args.ref_B = {nullptr, int(configuration->ldb)};
-    operator_args.stride_B = configuration->batch_stride_B;
-    operator_args.ref_C = {nullptr, int(configuration->ldc)};
-    operator_args.stride_C = configuration->batch_stride_C;
-    operator_args.ref_D = {nullptr, int(configuration->ldd)};
-    operator_args.stride_D = configuration->batch_stride_D;
-
-    operator_args.batch_count = configuration->batch_count;
-
-    return Status::kSuccess;
-  }
-
-  /// Constructs the arguments structure given the configuration and arguments
-  static Status update_arguments_(
-    OperatorArguments &operator_args,
-    GemmBatchedArguments const *arguments) {
-
-    if (arguments->pointer_mode == ScalarPointerMode::kHost) {
-      typename Operator::EpilogueOutputOp::Params params(
-        *static_cast<ElementCompute const *>(arguments->alpha),
-        *static_cast<ElementCompute const *>(arguments->beta)
-      );
- 
-      operator_args.epilogue = params;
-    }
-    else if (arguments->pointer_mode == ScalarPointerMode::kDevice){
-      typename Operator::EpilogueOutputOp::Params params(
-        static_cast<ElementCompute const *>(arguments->alpha),
-        static_cast<ElementCompute const *>(arguments->beta)
-      );
-      operator_args.epilogue = params; 
-    }
-    else {
-      return Status::kErrorInvalidProblem;
-    }
-
-    operator_args.ref_A.reset(static_cast<ElementA const *>(arguments->A));
-    operator_args.ref_B.reset(static_cast<ElementB const *>(arguments->B));
-    operator_args.ref_C.reset(static_cast<ElementC const *>(arguments->C));
-    operator_args.ref_D.reset(static_cast<ElementC *>(arguments->D));
-
-    return Status::kSuccess;
-  }
+    ///
+    GemmDescription description_;
 
 public:
-
-  /// Returns the description of the GEMM operation
-  virtual OperationDescription const & description() const {
-    return description_;
-  }
-
-  /// Returns success if the operation can proceed
-  virtual Status can_implement(
-    void const *configuration_ptr, 
-    void const *arguments_ptr) const {
-
-    GemmBatchedConfiguration const *configuration = 
-      static_cast<GemmBatchedConfiguration const *>(configuration_ptr);
-
-    GemmBatchedArguments const *arguments = 
-      static_cast<GemmBatchedArguments const *>(arguments_ptr);
-
-    OperatorArguments args;
-
-    Status status = construct_arguments_(args, configuration);
-
-    if (status != Status::kSuccess) {
-      return status;
+    /// Constructor
+    GemmBatchedOperation(char const* name = "unknown_gemm")
+            : GemmOperationBase<Operator_>(name) {
+        description_.gemm_kind = GemmKind::kBatched;
     }
 
-    status = update_arguments_(args, arguments);
+protected:
+    /// Constructs the arguments structure given the configuration and arguments
+    static Status construct_arguments_(
+            OperatorArguments& operator_args,
+            GemmBatchedConfiguration const* configuration) {
+        operator_args.problem_size = configuration->problem_size;
+        operator_args.ref_A = {nullptr, int(configuration->lda)};
+        operator_args.stride_A = configuration->batch_stride_A;
+        operator_args.ref_B = {nullptr, int(configuration->ldb)};
+        operator_args.stride_B = configuration->batch_stride_B;
+        operator_args.ref_C = {nullptr, int(configuration->ldc)};
+        operator_args.stride_C = configuration->batch_stride_C;
+        operator_args.ref_D = {nullptr, int(configuration->ldd)};
+        operator_args.stride_D = configuration->batch_stride_D;
 
-    if (status != Status::kSuccess) {
-      return status;
+        operator_args.batch_count = configuration->batch_count;
+
+        return Status::kSuccess;
     }
 
-    return Operator::can_implement(args);
-  }
-  
-  /// Gets the host-side workspace
-  virtual uint64_t get_host_workspace_size(
-    void const *configuration) const {
+    /// Constructs the arguments structure given the configuration and arguments
+    static Status update_arguments_(OperatorArguments& operator_args,
+                                    GemmBatchedArguments const* arguments) {
+        if (arguments->pointer_mode == ScalarPointerMode::kHost) {
+            typename Operator::EpilogueOutputOp::Params params(
+                    *static_cast<ElementCompute const*>(arguments->alpha),
+                    *static_cast<ElementCompute const*>(arguments->beta));
 
-    return sizeof(Operator);
-  }
-  
-  /// Gets the device-side workspace
-  virtual uint64_t get_device_workspace_size(
-    void const *configuration_ptr) const {
+            operator_args.epilogue = params;
+        } else if (arguments->pointer_mode == ScalarPointerMode::kDevice) {
+            typename Operator::EpilogueOutputOp::Params params(
+                    static_cast<ElementCompute const*>(arguments->alpha),
+                    static_cast<ElementCompute const*>(arguments->beta));
+            operator_args.epilogue = params;
+        } else {
+            return Status::kErrorInvalidProblem;
+        }
 
-    OperatorArguments args;
+        operator_args.ref_A.reset(static_cast<ElementA const*>(arguments->A));
+        operator_args.ref_B.reset(static_cast<ElementB const*>(arguments->B));
+        operator_args.ref_C.reset(static_cast<ElementC const*>(arguments->C));
+        operator_args.ref_D.reset(static_cast<ElementC*>(arguments->D));
 
-    Status status = construct_arguments_(
-      args, 
-      static_cast<GemmBatchedConfiguration const *>(configuration_ptr));
-
-    if (status != Status::kSuccess) {
-      return 0;
+        return Status::kSuccess;
     }
 
-    return Operator::get_workspace_size(args);
-  }
-  
-  /// Initializes the workspace
-  virtual Status initialize(
-    void const *configuration_ptr, 
-    void *host_workspace, 
-    void *device_workspace, 
-    cudaStream_t stream = nullptr) const {
-
-    OperatorArguments args;
-
-    Status status = construct_arguments_(
-      args, 
-      static_cast<GemmBatchedConfiguration const *>(configuration_ptr));
-
-    if (status != Status::kSuccess) {
-      return status;
+public:
+    /// Returns the description of the GEMM operation
+    virtual OperationDescription const& description() const {
+        return description_;
     }
 
-    Operator *op = new (host_workspace) Operator;
+    /// Returns success if the operation can proceed
+    virtual Status can_implement(void const* configuration_ptr,
+                                 void const* arguments_ptr) const {
+        GemmBatchedConfiguration const* configuration =
+                static_cast<GemmBatchedConfiguration const*>(configuration_ptr);
 
-    return op->initialize(args, device_workspace, stream);
-  }
+        GemmBatchedArguments const* arguments =
+                static_cast<GemmBatchedArguments const*>(arguments_ptr);
 
-  /// Runs the kernel
-  virtual Status run(
-    void const *arguments_ptr,
-    void *host_workspace, 
-    void *device_workspace = nullptr, 
-    cudaStream_t stream = nullptr) const {
+        OperatorArguments args;
 
-    OperatorArguments args;
+        Status status = construct_arguments_(args, configuration);
 
-    Status status = update_arguments_(
-      args, 
-      static_cast<GemmBatchedArguments const *>(arguments_ptr));
+        if (status != Status::kSuccess) {
+            return status;
+        }
 
-    if (status != Status::kSuccess) {
-      return status;
+        status = update_arguments_(args, arguments);
+
+        if (status != Status::kSuccess) {
+            return status;
+        }
+
+        return Operator::can_implement(args);
     }
 
-    Operator *op = static_cast<Operator *>(host_workspace);
-
-    status = op->update(args, device_workspace);
-
-    if (status != Status::kSuccess) {
-      return status;
+    /// Gets the host-side workspace
+    virtual uint64_t get_host_workspace_size(void const* configuration) const {
+        return sizeof(Operator);
     }
 
-    return op->run(stream);
-  }
+    /// Gets the device-side workspace
+    virtual uint64_t get_device_workspace_size(
+            void const* configuration_ptr) const {
+        OperatorArguments args;
+
+        Status status = construct_arguments_(
+                args, static_cast<GemmBatchedConfiguration const*>(
+                              configuration_ptr));
+
+        if (status != Status::kSuccess) {
+            return 0;
+        }
+
+        return Operator::get_workspace_size(args);
+    }
+
+    /// Initializes the workspace
+    virtual Status initialize(void const* configuration_ptr,
+                              void* host_workspace, void* device_workspace,
+                              cudaStream_t stream = nullptr) const {
+        OperatorArguments args;
+
+        Status status = construct_arguments_(
+                args, static_cast<GemmBatchedConfiguration const*>(
+                              configuration_ptr));
+
+        if (status != Status::kSuccess) {
+            return status;
+        }
+
+        Operator* op = new (host_workspace) Operator;
+
+        return op->initialize(args, device_workspace, stream);
+    }
+
+    /// Runs the kernel
+    virtual Status run(void const* arguments_ptr, void* host_workspace,
+                       void* device_workspace = nullptr,
+                       cudaStream_t stream = nullptr) const {
+        OperatorArguments args;
+
+        Status status = update_arguments_(
+                args, static_cast<GemmBatchedArguments const*>(arguments_ptr));
+
+        if (status != Status::kSuccess) {
+            return status;
+        }
+
+        Operator* op = static_cast<Operator*>(host_workspace);
+
+        status = op->update(args, device_workspace);
+
+        if (status != Status::kSuccess) {
+            return status;
+        }
+
+        return op->run(stream);
+    }
 };
-
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 template <typename Operator_>
 class GemmArrayOperation : public GemmOperationBase<Operator_> {
 public:
+    using Operator = Operator_;
+    using ElementA = typename Operator::ElementA;
+    using LayoutA = typename Operator::LayoutA;
+    using ElementB = typename Operator::ElementB;
+    using LayoutB = typename Operator::LayoutB;
+    using ElementC = typename Operator::ElementC;
+    using LayoutC = typename Operator::LayoutC;
+    using ElementAccumulator = typename Operator::ElementAccumulator;
+    using ElementCompute = typename Operator::EpilogueOutputOp::ElementCompute;
 
-  using Operator = Operator_;
-  using ElementA = typename Operator::ElementA;
-  using LayoutA = typename Operator::LayoutA;
-  using ElementB = typename Operator::ElementB;
-  using LayoutB = typename Operator::LayoutB;
-  using ElementC = typename Operator::ElementC;
-  using LayoutC = typename Operator::LayoutC;
-  using ElementAccumulator = typename Operator::ElementAccumulator;
-  using ElementCompute = typename Operator::EpilogueOutputOp::ElementCompute;
-
-  using OperatorArguments = typename Operator::Arguments;
-
-protected:
-
-  /// 
-  GemmDescription description_;
-
-public:
-
-  /// Constructor
-  GemmArrayOperation(char const *name = "unknown_gemm"): GemmOperationBase<Operator_>(name) {
-
-    description_.gemm_kind = GemmKind::kArray;
-  }
+    using OperatorArguments = typename Operator::Arguments;
 
 protected:
-
-  /// Constructs the arguments structure given the configuration and arguments
-  static Status construct_arguments_(
-    OperatorArguments &operator_args,
-    GemmArrayConfiguration const *configuration) {
-
-    operator_args.problem_size = configuration->problem_size;
-
-    operator_args.batch_count = configuration->batch_count;
-
-    return Status::kSuccess;
-  }
-
-  /// Constructs the arguments structure given the configuration and arguments
-  static Status update_arguments_(
-    OperatorArguments &operator_args,
-    GemmArrayArguments const *arguments) {
-
-    if (arguments->pointer_mode == ScalarPointerMode::kHost) {
-      typename Operator::EpilogueOutputOp::Params params(
-        *static_cast<ElementCompute const *>(arguments->alpha),
-        *static_cast<ElementCompute const *>(arguments->beta)
-      );
-      operator_args.epilogue = params;
-    }
-    else if (arguments->pointer_mode == ScalarPointerMode::kDevice){
-      typename Operator::EpilogueOutputOp::Params params(
-        static_cast<ElementCompute const *>(arguments->alpha),
-        static_cast<ElementCompute const *>(arguments->beta)
-      );
-      operator_args.epilogue = params; 
-    }
-    else {
-      return Status::kErrorInvalidProblem;
-    }
-
-    return Status::kSuccess;
-  }
+    ///
+    GemmDescription description_;
 
 public:
-
-  /// Returns the description of the GEMM operation
-  virtual OperationDescription const & description() const {
-    return description_;
-  }
-
-  /// Returns success if the operation can proceed
-  virtual Status can_implement(
-    void const *configuration_ptr, 
-    void const *arguments_ptr) const {
-
-    GemmArrayConfiguration const *configuration = 
-      static_cast<GemmArrayConfiguration const *>(configuration_ptr);
-
-    GemmArrayArguments const *arguments = 
-      static_cast<GemmArrayArguments const *>(arguments_ptr);
-
-    OperatorArguments args;
-
-    Status status = construct_arguments_(args, configuration);
-
-    if (status != Status::kSuccess) {
-      return status;
+    /// Constructor
+    GemmArrayOperation(char const* name = "unknown_gemm")
+            : GemmOperationBase<Operator_>(name) {
+        description_.gemm_kind = GemmKind::kArray;
     }
 
-    status = update_arguments_(args, arguments);
+protected:
+    /// Constructs the arguments structure given the configuration and arguments
+    static Status construct_arguments_(
+            OperatorArguments& operator_args,
+            GemmArrayConfiguration const* configuration) {
+        operator_args.problem_size = configuration->problem_size;
 
-    if (status != Status::kSuccess) {
-      return status;
+        operator_args.batch_count = configuration->batch_count;
+
+        return Status::kSuccess;
     }
 
-    return Operator::can_implement(args);
-  }
-  
-  /// Gets the host-side workspace
-  virtual uint64_t get_host_workspace_size(
-    void const *configuration) const {
+    /// Constructs the arguments structure given the configuration and arguments
+    static Status update_arguments_(OperatorArguments& operator_args,
+                                    GemmArrayArguments const* arguments) {
+        if (arguments->pointer_mode == ScalarPointerMode::kHost) {
+            typename Operator::EpilogueOutputOp::Params params(
+                    *static_cast<ElementCompute const*>(arguments->alpha),
+                    *static_cast<ElementCompute const*>(arguments->beta));
+            operator_args.epilogue = params;
+        } else if (arguments->pointer_mode == ScalarPointerMode::kDevice) {
+            typename Operator::EpilogueOutputOp::Params params(
+                    static_cast<ElementCompute const*>(arguments->alpha),
+                    static_cast<ElementCompute const*>(arguments->beta));
+            operator_args.epilogue = params;
+        } else {
+            return Status::kErrorInvalidProblem;
+        }
 
-    return sizeof(Operator);
-  }
-  
-  /// Gets the device-side workspace
-  virtual uint64_t get_device_workspace_size(
-    void const *configuration_ptr) const {
-
-    OperatorArguments args;
-
-    Status status = construct_arguments_(
-      args, 
-      static_cast<GemmArrayConfiguration const *>(configuration_ptr));
-
-    if (status != Status::kSuccess) {
-      return 0;
+        return Status::kSuccess;
     }
 
-    return Operator::get_workspace_size(args);
-  }
-  
-  /// Initializes the workspace
-  virtual Status initialize(
-    void const *configuration_ptr, 
-    void *host_workspace, 
-    void *device_workspace, 
-    cudaStream_t stream = nullptr) const {
-
-    OperatorArguments args;
-
-    Status status = construct_arguments_(
-      args, 
-      static_cast<GemmArrayConfiguration const *>(configuration_ptr));
-
-    if (status != Status::kSuccess) {
-      return status;
+public:
+    /// Returns the description of the GEMM operation
+    virtual OperationDescription const& description() const {
+        return description_;
     }
 
-    Operator *op = new (host_workspace) Operator;
+    /// Returns success if the operation can proceed
+    virtual Status can_implement(void const* configuration_ptr,
+                                 void const* arguments_ptr) const {
+        GemmArrayConfiguration const* configuration =
+                static_cast<GemmArrayConfiguration const*>(configuration_ptr);
 
-    return op->initialize(args, device_workspace, stream);
-  }
+        GemmArrayArguments const* arguments =
+                static_cast<GemmArrayArguments const*>(arguments_ptr);
 
-  /// Runs the kernel
-  virtual Status run(
-    void const *arguments_ptr,
-    void *host_workspace, 
-    void *device_workspace = nullptr, 
-    cudaStream_t stream = nullptr) const {
+        OperatorArguments args;
 
-    OperatorArguments args;
+        Status status = construct_arguments_(args, configuration);
 
-    Status status = update_arguments_(
-      args, 
-      static_cast<GemmArrayArguments const *>(arguments_ptr));
+        if (status != Status::kSuccess) {
+            return status;
+        }
 
-    if (status != Status::kSuccess) {
-      return status;
+        status = update_arguments_(args, arguments);
+
+        if (status != Status::kSuccess) {
+            return status;
+        }
+
+        return Operator::can_implement(args);
     }
 
-    Operator *op = static_cast<Operator *>(host_workspace);
-
-    status = op->update(args, device_workspace);
-
-    if (status != Status::kSuccess) {
-      return status;
+    /// Gets the host-side workspace
+    virtual uint64_t get_host_workspace_size(void const* configuration) const {
+        return sizeof(Operator);
     }
 
-    return op->run(stream);
-  }
+    /// Gets the device-side workspace
+    virtual uint64_t get_device_workspace_size(
+            void const* configuration_ptr) const {
+        OperatorArguments args;
+
+        Status status = construct_arguments_(
+                args,
+                static_cast<GemmArrayConfiguration const*>(configuration_ptr));
+
+        if (status != Status::kSuccess) {
+            return 0;
+        }
+
+        return Operator::get_workspace_size(args);
+    }
+
+    /// Initializes the workspace
+    virtual Status initialize(void const* configuration_ptr,
+                              void* host_workspace, void* device_workspace,
+                              cudaStream_t stream = nullptr) const {
+        OperatorArguments args;
+
+        Status status = construct_arguments_(
+                args,
+                static_cast<GemmArrayConfiguration const*>(configuration_ptr));
+
+        if (status != Status::kSuccess) {
+            return status;
+        }
+
+        Operator* op = new (host_workspace) Operator;
+
+        return op->initialize(args, device_workspace, stream);
+    }
+
+    /// Runs the kernel
+    virtual Status run(void const* arguments_ptr, void* host_workspace,
+                       void* device_workspace = nullptr,
+                       cudaStream_t stream = nullptr) const {
+        OperatorArguments args;
+
+        Status status = update_arguments_(
+                args, static_cast<GemmArrayArguments const*>(arguments_ptr));
+
+        if (status != Status::kSuccess) {
+            return status;
+        }
+
+        Operator* op = static_cast<Operator*>(host_workspace);
+
+        status = op->update(args, device_workspace);
+
+        if (status != Status::kSuccess) {
+            return status;
+        }
+
+        return op->run(stream);
+    }
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -704,194 +634,172 @@ public:
 template <typename Operator_>
 class GemmUniversalOperation : public GemmOperationBase<Operator_> {
 public:
+    using Operator = Operator_;
+    using ElementA = typename Operator::ElementA;
+    using LayoutA = typename Operator::LayoutA;
+    using ElementB = typename Operator::ElementB;
+    using LayoutB = typename Operator::LayoutB;
+    using ElementC = typename Operator::ElementC;
+    using LayoutC = typename Operator::LayoutC;
+    using ElementAccumulator = typename Operator::ElementAccumulator;
+    using ElementCompute = typename Operator::EpilogueOutputOp::ElementCompute;
 
-  using Operator = Operator_;
-  using ElementA = typename Operator::ElementA;
-  using LayoutA = typename Operator::LayoutA;
-  using ElementB = typename Operator::ElementB;
-  using LayoutB = typename Operator::LayoutB;
-  using ElementC = typename Operator::ElementC;
-  using LayoutC = typename Operator::LayoutC;
-  using ElementAccumulator = typename Operator::ElementAccumulator;
-  using ElementCompute = typename Operator::EpilogueOutputOp::ElementCompute;
-
-  using OperatorArguments = typename Operator::Arguments;
+    using OperatorArguments = typename Operator::Arguments;
 
 public:
-
-  /// Constructor
-  GemmUniversalOperation(char const *name = "unknown_gemm"): 
-    GemmOperationBase<Operator_>(name) {
-
-    this->description_.gemm_kind = GemmKind::kUniversal;
-  }
+    /// Constructor
+    GemmUniversalOperation(char const* name = "unknown_gemm")
+            : GemmOperationBase<Operator_>(name) {
+        this->description_.gemm_kind = GemmKind::kUniversal;
+    }
 
 protected:
+    /// Constructs the arguments structure given the configuration and arguments
+    static Status construct_arguments_(
+            OperatorArguments& operator_args,
+            GemmUniversalConfiguration const* configuration) {
+        operator_args.mode = configuration->mode;
 
-  /// Constructs the arguments structure given the configuration and arguments
-  static Status construct_arguments_(
-    OperatorArguments &operator_args,
-    GemmUniversalConfiguration const *configuration) {
+        operator_args.problem_size = configuration->problem_size;
+        operator_args.batch_count = configuration->batch_count;
 
-    operator_args.mode = configuration->mode;
+        operator_args.lda = int(configuration->lda);
+        operator_args.ldb = int(configuration->ldb);
+        operator_args.ldc = int(configuration->ldc);
+        operator_args.ldd = int(configuration->ldd);
 
-    operator_args.problem_size = configuration->problem_size;
-    operator_args.batch_count = configuration->batch_count;
-
-    operator_args.lda = int(configuration->lda);
-    operator_args.ldb = int(configuration->ldb);
-    operator_args.ldc = int(configuration->ldc);
-    operator_args.ldd = int(configuration->ldd);
-
-    return Status::kSuccess;
-  }
-
-  /// Constructs the arguments structure given the configuration and arguments
-  static Status update_arguments_(
-    OperatorArguments &operator_args,
-    GemmUniversalArguments const *arguments) {
-    
-    if (arguments->pointer_mode == ScalarPointerMode::kHost) {
-      typename Operator::EpilogueOutputOp::Params params(
-        *static_cast<ElementCompute const *>(arguments->alpha),
-        *static_cast<ElementCompute const *>(arguments->beta)
-      );
-      operator_args.epilogue = params;
-    }
-    else if (arguments->pointer_mode == ScalarPointerMode::kDevice){
-      typename Operator::EpilogueOutputOp::Params params(
-        static_cast<ElementCompute const *>(arguments->alpha),
-        static_cast<ElementCompute const *>(arguments->beta)
-      );
-      operator_args.epilogue = params; 
-    }
-    else {
-      return Status::kErrorInvalidProblem;
+        return Status::kSuccess;
     }
 
-    // update arguments
-    operator_args.ptr_A = arguments->A;
-    operator_args.ptr_B = arguments->B;
-    operator_args.ptr_C = arguments->C;
-    operator_args.ptr_D = arguments->D;
+    /// Constructs the arguments structure given the configuration and arguments
+    static Status update_arguments_(OperatorArguments& operator_args,
+                                    GemmUniversalArguments const* arguments) {
+        if (arguments->pointer_mode == ScalarPointerMode::kHost) {
+            typename Operator::EpilogueOutputOp::Params params(
+                    *static_cast<ElementCompute const*>(arguments->alpha),
+                    *static_cast<ElementCompute const*>(arguments->beta));
+            operator_args.epilogue = params;
+        } else if (arguments->pointer_mode == ScalarPointerMode::kDevice) {
+            typename Operator::EpilogueOutputOp::Params params(
+                    static_cast<ElementCompute const*>(arguments->alpha),
+                    static_cast<ElementCompute const*>(arguments->beta));
+            operator_args.epilogue = params;
+        } else {
+            return Status::kErrorInvalidProblem;
+        }
 
-    operator_args.batch_stride_A = arguments->batch_stride_A;
-    operator_args.batch_stride_B = arguments->batch_stride_B;
-    operator_args.batch_stride_C = arguments->batch_stride_C;
-    operator_args.batch_stride_D = arguments->batch_stride_D;
-    
-    return Status::kSuccess;
-  }
+        // update arguments
+        operator_args.ptr_A = arguments->A;
+        operator_args.ptr_B = arguments->B;
+        operator_args.ptr_C = arguments->C;
+        operator_args.ptr_D = arguments->D;
+
+        operator_args.batch_stride_A = arguments->batch_stride_A;
+        operator_args.batch_stride_B = arguments->batch_stride_B;
+        operator_args.batch_stride_C = arguments->batch_stride_C;
+        operator_args.batch_stride_D = arguments->batch_stride_D;
+
+        return Status::kSuccess;
+    }
 
 public:
+    /// Returns success if the operation can proceed
+    virtual Status can_implement(void const* configuration_ptr,
+                                 void const* arguments_ptr) const {
+        GemmUniversalConfiguration const* configuration =
+                static_cast<GemmUniversalConfiguration const*>(
+                        configuration_ptr);
 
-  /// Returns success if the operation can proceed
-  virtual Status can_implement(
-    void const *configuration_ptr, 
-    void const *arguments_ptr) const {
-    
-    GemmUniversalConfiguration const *configuration = 
-      static_cast<GemmUniversalConfiguration const *>(configuration_ptr);
+        GemmUniversalArguments const* arguments =
+                static_cast<GemmUniversalArguments const*>(arguments_ptr);
 
-    GemmUniversalArguments const *arguments = 
-      static_cast<GemmUniversalArguments const *>(arguments_ptr);
+        OperatorArguments args;
 
-    OperatorArguments args;
+        Status status = construct_arguments_(args, configuration);
 
-    Status status = construct_arguments_(args, configuration);
+        if (status != Status::kSuccess) {
+            return status;
+        }
 
-    if (status != Status::kSuccess) {
-      return status;
+        status = update_arguments_(args, arguments);
+
+        if (status != Status::kSuccess) {
+            return status;
+        }
+
+        return Operator::can_implement(args);
     }
 
-    status = update_arguments_(args, arguments);
-
-    if (status != Status::kSuccess) {
-      return status;
+    /// Gets the host-side workspace
+    virtual uint64_t get_host_workspace_size(void const* configuration) const {
+        return sizeof(Operator);
     }
 
-    return Operator::can_implement(args);
-  }
-  
-  /// Gets the host-side workspace
-  virtual uint64_t get_host_workspace_size(
-    void const *configuration) const {
+    /// Gets the device-side workspace
+    virtual uint64_t get_device_workspace_size(
+            void const* configuration_ptr) const {
+        OperatorArguments args;
 
-    return sizeof(Operator);
-  }
-  
-  /// Gets the device-side workspace
-  virtual uint64_t get_device_workspace_size(
-    void const *configuration_ptr) const {
+        Status status = construct_arguments_(
+                args, static_cast<GemmUniversalConfiguration const*>(
+                              configuration_ptr));
 
-    OperatorArguments args;
+        if (status != Status::kSuccess) {
+            return 0;
+        }
 
-    Status status = construct_arguments_(
-      args, 
-      static_cast<GemmUniversalConfiguration const *>(configuration_ptr));
+        uint64_t size = Operator::get_workspace_size(args);
 
-    if (status != Status::kSuccess) {
-      return 0;
+        return size;
     }
 
-    uint64_t size = Operator::get_workspace_size(args);
+    /// Initializes the workspace
+    virtual Status initialize(void const* configuration_ptr,
+                              void* host_workspace, void* device_workspace,
+                              cudaStream_t stream = nullptr) const {
+        OperatorArguments args;
 
-    return size;
-  }
-  
-  /// Initializes the workspace
-  virtual Status initialize(
-    void const *configuration_ptr, 
-    void *host_workspace, 
-    void *device_workspace, 
-    cudaStream_t stream = nullptr) const {
+        Status status = construct_arguments_(
+                args, static_cast<GemmUniversalConfiguration const*>(
+                              configuration_ptr));
 
-    OperatorArguments args;
+        if (status != Status::kSuccess) {
+            return status;
+        }
 
-    Status status = construct_arguments_(
-      args, 
-      static_cast<GemmUniversalConfiguration const *>(configuration_ptr));
+        Operator* op = new (host_workspace) Operator;
 
-    if (status != Status::kSuccess) {
-      return status;
+        status = op->initialize(args, device_workspace, stream);
+
+        return status;
     }
 
-    Operator *op = new (host_workspace) Operator;
+    /// Runs the kernel
+    virtual Status run(void const* arguments_ptr, void* host_workspace,
+                       void* device_workspace = nullptr,
+                       cudaStream_t stream = nullptr) const {
+        OperatorArguments args;
 
-    status = op->initialize(args, device_workspace, stream);
-    
-    return status;
-  }
+        Status status = update_arguments_(
+                args,
+                static_cast<GemmUniversalArguments const*>(arguments_ptr));
 
-  /// Runs the kernel
-  virtual Status run(
-    void const *arguments_ptr,
-    void *host_workspace, 
-    void *device_workspace = nullptr, 
-    cudaStream_t stream = nullptr) const {
+        if (status != Status::kSuccess) {
+            return status;
+        }
 
-    OperatorArguments args;
-    
-    Status status = update_arguments_(
-      args, 
-      static_cast<GemmUniversalArguments const *>(arguments_ptr));
+        Operator* op = static_cast<Operator*>(host_workspace);
 
-    if (status != Status::kSuccess) {
-      return status;
+        status = op->update(args, device_workspace);
+
+        if (status != Status::kSuccess) {
+            return status;
+        }
+
+        status = op->run(stream);
+
+        return status;
     }
-    
-    Operator *op = static_cast<Operator *>(host_workspace);
-    
-    status = op->update(args, device_workspace);
-
-    if (status != Status::kSuccess) {
-      return status;
-    }
-    
-    status = op->run(stream);
-    
-    return status;
-  }
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -899,204 +807,188 @@ public:
 template <typename Operator_>
 class GemmPlanarComplexOperation : public GemmOperationBase<Operator_> {
 public:
+    using Operator = Operator_;
+    using ElementA = typename Operator::ElementA;
+    using LayoutA = typename Operator::LayoutA;
+    using ElementB = typename Operator::ElementB;
+    using LayoutB = typename Operator::LayoutB;
+    using ElementC = typename Operator::ElementC;
+    using LayoutC = typename Operator::LayoutC;
+    using ElementAccumulator = typename Operator::ElementAccumulator;
+    using ElementCompute = typename Operator::EpilogueOutputOp::ElementCompute;
 
-  using Operator = Operator_;
-  using ElementA = typename Operator::ElementA;
-  using LayoutA = typename Operator::LayoutA;
-  using ElementB = typename Operator::ElementB;
-  using LayoutB = typename Operator::LayoutB;
-  using ElementC = typename Operator::ElementC;
-  using LayoutC = typename Operator::LayoutC;
-  using ElementAccumulator = typename Operator::ElementAccumulator;
-  using ElementCompute = typename Operator::EpilogueOutputOp::ElementCompute;
-
-  using OperatorArguments = typename Operator::Arguments;
+    using OperatorArguments = typename Operator::Arguments;
 
 public:
-
-  /// Constructor
-  GemmPlanarComplexOperation(char const *name = "unknown_gemm"): GemmOperationBase<Operator_>(name) {
-
-    this->description_.gemm_kind = GemmKind::kPlanarComplex;
-  }
+    /// Constructor
+    GemmPlanarComplexOperation(char const* name = "unknown_gemm")
+            : GemmOperationBase<Operator_>(name) {
+        this->description_.gemm_kind = GemmKind::kPlanarComplex;
+    }
 
 protected:
+    /// Constructs the arguments structure given the configuration and arguments
+    static Status construct_arguments_(
+            OperatorArguments& operator_args,
+            GemmPlanarComplexConfiguration const* configuration) {
+        operator_args.mode = cutlass::gemm::GemmUniversalMode::kBatched;
+        operator_args.problem_size = configuration->problem_size;
+        operator_args.batch_count = configuration->batch_count;
 
-  /// Constructs the arguments structure given the configuration and arguments
-  static Status construct_arguments_(
-    OperatorArguments &operator_args,
-    GemmPlanarComplexConfiguration const *configuration) {
+        operator_args.lda_real = int(configuration->lda_real);
+        operator_args.lda_imag = int(configuration->lda_imag);
+        operator_args.ldb_real = int(configuration->ldb_real);
+        operator_args.ldb_imag = int(configuration->ldb_imag);
+        operator_args.ldc_real = int(configuration->ldc_real);
+        operator_args.ldc_imag = int(configuration->ldc_imag);
+        operator_args.ldd_real = int(configuration->ldd_real);
+        operator_args.ldd_imag = int(configuration->ldd_imag);
 
-    operator_args.mode = cutlass::gemm::GemmUniversalMode::kBatched;
-    operator_args.problem_size = configuration->problem_size;
-    operator_args.batch_count = configuration->batch_count;
-
-    operator_args.lda_real = int(configuration->lda_real);
-    operator_args.lda_imag = int(configuration->lda_imag);
-    operator_args.ldb_real = int(configuration->ldb_real);
-    operator_args.ldb_imag = int(configuration->ldb_imag);
-    operator_args.ldc_real = int(configuration->ldc_real);
-    operator_args.ldc_imag = int(configuration->ldc_imag);
-    operator_args.ldd_real = int(configuration->ldd_real);
-    operator_args.ldd_imag = int(configuration->ldd_imag);
-
-    return Status::kSuccess;
-  }
-
-  /// Constructs the arguments structure given the configuration and arguments
-  static Status update_arguments_(
-    OperatorArguments &operator_args,
-    GemmPlanarComplexArguments const *arguments) {
-    
-    if (arguments->pointer_mode == ScalarPointerMode::kHost) {
-      typename Operator::EpilogueOutputOp::Params params(
-        *static_cast<cutlass::complex<ElementCompute> const *>(arguments->alpha),
-        *static_cast<cutlass::complex<ElementCompute> const *>(arguments->beta)
-      );
-      operator_args.epilogue = params;
-    }
-    else if (arguments->pointer_mode == ScalarPointerMode::kDevice){
-      typename Operator::EpilogueOutputOp::Params params(
-        static_cast<cutlass::complex<ElementCompute> const *>(arguments->alpha),
-        static_cast<cutlass::complex<ElementCompute> const *>(arguments->beta)
-      );
-      operator_args.epilogue = params; 
-    }
-    else {
-      return Status::kErrorInvalidProblem;
+        return Status::kSuccess;
     }
 
-    // update arguments
-    operator_args.ptr_A_real = arguments->A_real;
-    operator_args.ptr_A_imag = arguments->A_imag;
-    operator_args.ptr_B_real = arguments->B_real;
-    operator_args.ptr_B_imag = arguments->B_imag;
-    operator_args.ptr_C_real = arguments->C_real;
-    operator_args.ptr_C_imag = arguments->C_imag;
-    operator_args.ptr_D_real = arguments->D_real;
-    operator_args.ptr_D_imag = arguments->D_imag;
+    /// Constructs the arguments structure given the configuration and arguments
+    static Status update_arguments_(
+            OperatorArguments& operator_args,
+            GemmPlanarComplexArguments const* arguments) {
+        if (arguments->pointer_mode == ScalarPointerMode::kHost) {
+            typename Operator::EpilogueOutputOp::Params params(
+                    *static_cast<cutlass::complex<ElementCompute> const*>(
+                            arguments->alpha),
+                    *static_cast<cutlass::complex<ElementCompute> const*>(
+                            arguments->beta));
+            operator_args.epilogue = params;
+        } else if (arguments->pointer_mode == ScalarPointerMode::kDevice) {
+            typename Operator::EpilogueOutputOp::Params params(
+                    static_cast<cutlass::complex<ElementCompute> const*>(
+                            arguments->alpha),
+                    static_cast<cutlass::complex<ElementCompute> const*>(
+                            arguments->beta));
+            operator_args.epilogue = params;
+        } else {
+            return Status::kErrorInvalidProblem;
+        }
 
-    operator_args.batch_stride_A = arguments->batch_stride_A_real;
-    operator_args.batch_stride_A_imag = arguments->batch_stride_A_imag;
-    operator_args.batch_stride_B = arguments->batch_stride_B_real;
-    operator_args.batch_stride_B_imag = arguments->batch_stride_B_imag;
-    operator_args.batch_stride_C = arguments->batch_stride_C_real;
-    operator_args.batch_stride_C_imag = arguments->batch_stride_C_imag;
-    operator_args.batch_stride_D = arguments->batch_stride_D_real;
-    operator_args.batch_stride_D_imag = arguments->batch_stride_D_imag;
-    
-    return Status::kSuccess;
-  }
+        // update arguments
+        operator_args.ptr_A_real = arguments->A_real;
+        operator_args.ptr_A_imag = arguments->A_imag;
+        operator_args.ptr_B_real = arguments->B_real;
+        operator_args.ptr_B_imag = arguments->B_imag;
+        operator_args.ptr_C_real = arguments->C_real;
+        operator_args.ptr_C_imag = arguments->C_imag;
+        operator_args.ptr_D_real = arguments->D_real;
+        operator_args.ptr_D_imag = arguments->D_imag;
+
+        operator_args.batch_stride_A = arguments->batch_stride_A_real;
+        operator_args.batch_stride_A_imag = arguments->batch_stride_A_imag;
+        operator_args.batch_stride_B = arguments->batch_stride_B_real;
+        operator_args.batch_stride_B_imag = arguments->batch_stride_B_imag;
+        operator_args.batch_stride_C = arguments->batch_stride_C_real;
+        operator_args.batch_stride_C_imag = arguments->batch_stride_C_imag;
+        operator_args.batch_stride_D = arguments->batch_stride_D_real;
+        operator_args.batch_stride_D_imag = arguments->batch_stride_D_imag;
+
+        return Status::kSuccess;
+    }
 
 public:
+    /// Returns success if the operation can proceed
+    virtual Status can_implement(void const* configuration_ptr,
+                                 void const* arguments_ptr) const {
+        GemmPlanarComplexConfiguration const* configuration =
+                static_cast<GemmPlanarComplexConfiguration const*>(
+                        configuration_ptr);
 
-  /// Returns success if the operation can proceed
-  virtual Status can_implement(
-    void const *configuration_ptr, 
-    void const *arguments_ptr) const {
-    
-    GemmPlanarComplexConfiguration const *configuration = 
-      static_cast<GemmPlanarComplexConfiguration const *>(configuration_ptr);
+        GemmPlanarComplexArguments const* arguments =
+                static_cast<GemmPlanarComplexArguments const*>(arguments_ptr);
 
-    GemmPlanarComplexArguments const *arguments = 
-      static_cast<GemmPlanarComplexArguments const *>(arguments_ptr);
+        OperatorArguments args;
 
-    OperatorArguments args;
+        Status status = construct_arguments_(args, configuration);
 
-    Status status = construct_arguments_(args, configuration);
+        if (status != Status::kSuccess) {
+            return status;
+        }
 
-    if (status != Status::kSuccess) {
-      return status;
+        status = update_arguments_(args, arguments);
+
+        if (status != Status::kSuccess) {
+            return status;
+        }
+
+        return Operator::can_implement(args);
     }
 
-    status = update_arguments_(args, arguments);
-
-    if (status != Status::kSuccess) {
-      return status;
+    /// Gets the host-side workspace
+    virtual uint64_t get_host_workspace_size(void const* configuration) const {
+        return sizeof(Operator);
     }
 
-    return Operator::can_implement(args);
-  }
-  
-  /// Gets the host-side workspace
-  virtual uint64_t get_host_workspace_size(
-    void const *configuration) const {
+    /// Gets the device-side workspace
+    virtual uint64_t get_device_workspace_size(
+            void const* configuration_ptr) const {
+        OperatorArguments args;
 
-    return sizeof(Operator);
-  }
-  
-  /// Gets the device-side workspace
-  virtual uint64_t get_device_workspace_size(
-    void const *configuration_ptr) const {
+        Status status = construct_arguments_(
+                args, static_cast<GemmPlanarComplexConfiguration const*>(
+                              configuration_ptr));
 
-    OperatorArguments args;
+        if (status != Status::kSuccess) {
+            return 0;
+        }
 
-    Status status = construct_arguments_(
-      args, 
-      static_cast<GemmPlanarComplexConfiguration const *>(configuration_ptr));
+        uint64_t size = Operator::get_workspace_size(args);
 
-    if (status != Status::kSuccess) {
-      return 0;
+        return size;
     }
 
-    uint64_t size = Operator::get_workspace_size(args);
+    /// Initializes the workspace
+    virtual Status initialize(void const* configuration_ptr,
+                              void* host_workspace, void* device_workspace,
+                              cudaStream_t stream = nullptr) const {
+        OperatorArguments args;
 
-    return size;
-  }
-  
-  /// Initializes the workspace
-  virtual Status initialize(
-    void const *configuration_ptr, 
-    void *host_workspace, 
-    void *device_workspace, 
-    cudaStream_t stream = nullptr) const {
+        Status status = construct_arguments_(
+                args, static_cast<GemmPlanarComplexConfiguration const*>(
+                              configuration_ptr));
 
-    OperatorArguments args;
+        if (status != Status::kSuccess) {
+            return status;
+        }
 
-    Status status = construct_arguments_(
-      args, 
-      static_cast<GemmPlanarComplexConfiguration const *>(configuration_ptr));
+        Operator* op = new (host_workspace) Operator;
 
-    if (status != Status::kSuccess) {
-      return status;
+        status = op->initialize(args, device_workspace, stream);
+
+        return status;
     }
 
-    Operator *op = new (host_workspace) Operator;
+    /// Runs the kernel
+    virtual Status run(void const* arguments_ptr, void* host_workspace,
+                       void* device_workspace = nullptr,
+                       cudaStream_t stream = nullptr) const {
+        OperatorArguments args;
 
-    status = op->initialize(args, device_workspace, stream);
-    
-    return status;
-  }
+        Status status = update_arguments_(
+                args,
+                static_cast<GemmPlanarComplexArguments const*>(arguments_ptr));
 
-  /// Runs the kernel
-  virtual Status run(
-    void const *arguments_ptr,
-    void *host_workspace, 
-    void *device_workspace = nullptr, 
-    cudaStream_t stream = nullptr) const {
+        if (status != Status::kSuccess) {
+            return status;
+        }
 
-    OperatorArguments args;
-    
-    Status status = update_arguments_(
-      args, 
-      static_cast<GemmPlanarComplexArguments const *>(arguments_ptr));
+        Operator* op = static_cast<Operator*>(host_workspace);
 
-    if (status != Status::kSuccess) {
-      return status;
+        status = op->update(args, device_workspace);
+
+        if (status != Status::kSuccess) {
+            return status;
+        }
+
+        status = op->run(stream);
+
+        return status;
     }
-    
-    Operator *op = static_cast<Operator *>(host_workspace);
-    
-    status = op->update(args, device_workspace);
-
-    if (status != Status::kSuccess) {
-      return status;
-    }
-    
-    status = op->run(stream);
-    
-    return status;
-  }
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1104,204 +996,189 @@ public:
 template <typename Operator_>
 class GemmPlanarComplexArrayOperation : public GemmOperationBase<Operator_> {
 public:
+    using Operator = Operator_;
+    using ElementA = typename Operator::ElementA;
+    using LayoutA = typename Operator::LayoutA;
+    using ElementB = typename Operator::ElementB;
+    using LayoutB = typename Operator::LayoutB;
+    using ElementC = typename Operator::ElementC;
+    using LayoutC = typename Operator::LayoutC;
+    using ElementAccumulator = typename Operator::ElementAccumulator;
+    using ElementCompute = typename Operator::EpilogueOutputOp::ElementCompute;
 
-  using Operator = Operator_;
-  using ElementA = typename Operator::ElementA;
-  using LayoutA = typename Operator::LayoutA;
-  using ElementB = typename Operator::ElementB;
-  using LayoutB = typename Operator::LayoutB;
-  using ElementC = typename Operator::ElementC;
-  using LayoutC = typename Operator::LayoutC;
-  using ElementAccumulator = typename Operator::ElementAccumulator;
-  using ElementCompute = typename Operator::EpilogueOutputOp::ElementCompute;
-
-  using OperatorArguments = typename Operator::Arguments;
+    using OperatorArguments = typename Operator::Arguments;
 
 public:
-
-  /// Constructor
-  GemmPlanarComplexArrayOperation(char const *name = "unknown_gemm"): GemmOperationBase<Operator_>(name) {
-
-    this->description_.gemm_kind = GemmKind::kPlanarComplexArray;
-  }
+    /// Constructor
+    GemmPlanarComplexArrayOperation(char const* name = "unknown_gemm")
+            : GemmOperationBase<Operator_>(name) {
+        this->description_.gemm_kind = GemmKind::kPlanarComplexArray;
+    }
 
 protected:
+    /// Constructs the arguments structure given the configuration and arguments
+    static Status construct_arguments_(
+            OperatorArguments& operator_args,
+            GemmPlanarComplexArrayConfiguration const* configuration) {
+        operator_args.mode = cutlass::gemm::GemmUniversalMode::kArray;
+        operator_args.problem_size = configuration->problem_size;
+        operator_args.batch_count = configuration->batch_count;
 
-  /// Constructs the arguments structure given the configuration and arguments
-  static Status construct_arguments_(
-    OperatorArguments &operator_args,
-    GemmPlanarComplexArrayConfiguration const *configuration) {
+        operator_args.lda_real = int(configuration->lda_real);
+        operator_args.lda_imag = int(configuration->lda_imag);
+        operator_args.ldb_real = int(configuration->ldb_real);
+        operator_args.ldb_imag = int(configuration->ldb_imag);
+        operator_args.ldc_real = int(configuration->ldc_real);
+        operator_args.ldc_imag = int(configuration->ldc_imag);
+        operator_args.ldd_real = int(configuration->ldd_real);
+        operator_args.ldd_imag = int(configuration->ldd_imag);
 
-    operator_args.mode = cutlass::gemm::GemmUniversalMode::kArray;
-    operator_args.problem_size = configuration->problem_size;
-    operator_args.batch_count = configuration->batch_count;
-
-    operator_args.lda_real = int(configuration->lda_real);
-    operator_args.lda_imag = int(configuration->lda_imag);
-    operator_args.ldb_real = int(configuration->ldb_real);
-    operator_args.ldb_imag = int(configuration->ldb_imag);
-    operator_args.ldc_real = int(configuration->ldc_real);
-    operator_args.ldc_imag = int(configuration->ldc_imag);
-    operator_args.ldd_real = int(configuration->ldd_real);
-    operator_args.ldd_imag = int(configuration->ldd_imag);
-
-    return Status::kSuccess;
-  }
-
-  /// Constructs the arguments structure given the configuration and arguments
-  static Status update_arguments_(
-    OperatorArguments &operator_args,
-    GemmPlanarComplexArrayArguments const *arguments) {
-    
-    if (arguments->pointer_mode == ScalarPointerMode::kHost) {
-      typename Operator::EpilogueOutputOp::Params params(
-        *static_cast<cutlass::complex<ElementCompute> const *>(arguments->alpha),
-        *static_cast<cutlass::complex<ElementCompute> const *>(arguments->beta)
-      );
-      operator_args.epilogue = params;
-    }
-    else if (arguments->pointer_mode == ScalarPointerMode::kDevice){
-      typename Operator::EpilogueOutputOp::Params params(
-        static_cast<cutlass::complex<ElementCompute> const *>(arguments->alpha),
-        static_cast<cutlass::complex<ElementCompute> const *>(arguments->beta)
-      );
-      operator_args.epilogue = params; 
-    }
-    else {
-      return Status::kErrorInvalidProblem;
+        return Status::kSuccess;
     }
 
-    // update arguments
-    operator_args.ptr_A_real = arguments->A_real;
-    operator_args.ptr_A_imag = arguments->A_imag;
-    operator_args.ptr_B_real = arguments->B_real;
-    operator_args.ptr_B_imag = arguments->B_imag;
-    operator_args.ptr_C_real = arguments->C_real;
-    operator_args.ptr_C_imag = arguments->C_imag;
-    operator_args.ptr_D_real = arguments->D_real;
-    operator_args.ptr_D_imag = arguments->D_imag;
+    /// Constructs the arguments structure given the configuration and arguments
+    static Status update_arguments_(
+            OperatorArguments& operator_args,
+            GemmPlanarComplexArrayArguments const* arguments) {
+        if (arguments->pointer_mode == ScalarPointerMode::kHost) {
+            typename Operator::EpilogueOutputOp::Params params(
+                    *static_cast<cutlass::complex<ElementCompute> const*>(
+                            arguments->alpha),
+                    *static_cast<cutlass::complex<ElementCompute> const*>(
+                            arguments->beta));
+            operator_args.epilogue = params;
+        } else if (arguments->pointer_mode == ScalarPointerMode::kDevice) {
+            typename Operator::EpilogueOutputOp::Params params(
+                    static_cast<cutlass::complex<ElementCompute> const*>(
+                            arguments->alpha),
+                    static_cast<cutlass::complex<ElementCompute> const*>(
+                            arguments->beta));
+            operator_args.epilogue = params;
+        } else {
+            return Status::kErrorInvalidProblem;
+        }
 
-    operator_args.ptr_M = arguments->M;
-    operator_args.ptr_N = arguments->N;
-    operator_args.ptr_K = arguments->K;
-    
-    return Status::kSuccess;
-  }
+        // update arguments
+        operator_args.ptr_A_real = arguments->A_real;
+        operator_args.ptr_A_imag = arguments->A_imag;
+        operator_args.ptr_B_real = arguments->B_real;
+        operator_args.ptr_B_imag = arguments->B_imag;
+        operator_args.ptr_C_real = arguments->C_real;
+        operator_args.ptr_C_imag = arguments->C_imag;
+        operator_args.ptr_D_real = arguments->D_real;
+        operator_args.ptr_D_imag = arguments->D_imag;
+
+        operator_args.ptr_M = arguments->M;
+        operator_args.ptr_N = arguments->N;
+        operator_args.ptr_K = arguments->K;
+
+        return Status::kSuccess;
+    }
 
 public:
+    /// Returns success if the operation can proceed
+    virtual Status can_implement(void const* configuration_ptr,
+                                 void const* arguments_ptr) const {
+        GemmPlanarComplexArrayConfiguration const* configuration =
+                static_cast<GemmPlanarComplexArrayConfiguration const*>(
+                        configuration_ptr);
 
-  /// Returns success if the operation can proceed
-  virtual Status can_implement(
-    void const *configuration_ptr, 
-    void const *arguments_ptr) const {
-    
-    GemmPlanarComplexArrayConfiguration const *configuration = 
-      static_cast<GemmPlanarComplexArrayConfiguration const *>(configuration_ptr);
+        GemmPlanarComplexArrayArguments const* arguments =
+                static_cast<GemmPlanarComplexArrayArguments const*>(
+                        arguments_ptr);
 
-    GemmPlanarComplexArrayArguments const *arguments = 
-      static_cast<GemmPlanarComplexArrayArguments const *>(arguments_ptr);
+        OperatorArguments args;
 
-    OperatorArguments args;
+        Status status = construct_arguments_(args, configuration);
 
-    Status status = construct_arguments_(args, configuration);
+        if (status != Status::kSuccess) {
+            return status;
+        }
 
-    if (status != Status::kSuccess) {
-      return status;
+        status = update_arguments_(args, arguments);
+
+        if (status != Status::kSuccess) {
+            return status;
+        }
+
+        return Operator::can_implement(args);
     }
 
-    status = update_arguments_(args, arguments);
-
-    if (status != Status::kSuccess) {
-      return status;
+    /// Gets the host-side workspace
+    virtual uint64_t get_host_workspace_size(void const* configuration) const {
+        return sizeof(Operator);
     }
 
-    return Operator::can_implement(args);
-  }
-  
-  /// Gets the host-side workspace
-  virtual uint64_t get_host_workspace_size(
-    void const *configuration) const {
+    /// Gets the device-side workspace
+    virtual uint64_t get_device_workspace_size(
+            void const* configuration_ptr) const {
+        OperatorArguments args;
 
-    return sizeof(Operator);
-  }
-  
-  /// Gets the device-side workspace
-  virtual uint64_t get_device_workspace_size(
-    void const *configuration_ptr) const {
+        Status status = construct_arguments_(
+                args, static_cast<GemmPlanarComplexArrayConfiguration const*>(
+                              configuration_ptr));
 
-    OperatorArguments args;
+        if (status != Status::kSuccess) {
+            return 0;
+        }
 
-    Status status = construct_arguments_(
-      args, 
-      static_cast<GemmPlanarComplexArrayConfiguration const *>(configuration_ptr));
+        uint64_t size = Operator::get_workspace_size(args);
 
-    if (status != Status::kSuccess) {
-      return 0;
+        return size;
     }
 
-    uint64_t size = Operator::get_workspace_size(args);
+    /// Initializes the workspace
+    virtual Status initialize(void const* configuration_ptr,
+                              void* host_workspace, void* device_workspace,
+                              cudaStream_t stream = nullptr) const {
+        OperatorArguments args;
 
-    return size;
-  }
-  
-  /// Initializes the workspace
-  virtual Status initialize(
-    void const *configuration_ptr, 
-    void *host_workspace, 
-    void *device_workspace, 
-    cudaStream_t stream = nullptr) const {
+        Status status = construct_arguments_(
+                args, static_cast<GemmPlanarComplexArrayConfiguration const*>(
+                              configuration_ptr));
 
-    OperatorArguments args;
+        if (status != Status::kSuccess) {
+            return status;
+        }
 
-    Status status = construct_arguments_(
-      args, 
-      static_cast<GemmPlanarComplexArrayConfiguration const *>(configuration_ptr));
+        Operator* op = new (host_workspace) Operator;
 
-    if (status != Status::kSuccess) {
-      return status;
+        status = op->initialize(args, device_workspace, stream);
+
+        return status;
     }
 
-    Operator *op = new (host_workspace) Operator;
+    /// Runs the kernel
+    virtual Status run(void const* arguments_ptr, void* host_workspace,
+                       void* device_workspace = nullptr,
+                       cudaStream_t stream = nullptr) const {
+        OperatorArguments args;
 
-    status = op->initialize(args, device_workspace, stream);
-    
-    return status;
-  }
+        Status status = update_arguments_(
+                args, static_cast<GemmPlanarComplexArrayArguments const*>(
+                              arguments_ptr));
 
-  /// Runs the kernel
-  virtual Status run(
-    void const *arguments_ptr,
-    void *host_workspace, 
-    void *device_workspace = nullptr, 
-    cudaStream_t stream = nullptr) const {
+        if (status != Status::kSuccess) {
+            return status;
+        }
 
-    OperatorArguments args;
-    
-    Status status = update_arguments_(
-      args, 
-      static_cast<GemmPlanarComplexArrayArguments const *>(arguments_ptr));
+        Operator* op = static_cast<Operator*>(host_workspace);
 
-    if (status != Status::kSuccess) {
-      return status;
+        status = op->update(args, device_workspace);
+
+        if (status != Status::kSuccess) {
+            return status;
+        }
+
+        status = op->run(stream);
+
+        return status;
     }
-    
-    Operator *op = static_cast<Operator *>(host_workspace);
-    
-    status = op->update(args, device_workspace);
-
-    if (status != Status::kSuccess) {
-      return status;
-    }
-    
-    status = op->run(stream);
-    
-    return status;
-  }
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-} // namespace library
-} // namespace cutlass
+}  // namespace library
+}  // namespace cutlass
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

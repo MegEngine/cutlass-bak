@@ -1,25 +1,27 @@
 /***************************************************************************************************
  * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without modification, are permitted
- * provided that the following conditions are met:
- *     * Redistributions of source code must retain the above copyright notice, this list of
- *       conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright notice, this list of
- *       conditions and the following disclaimer in the documentation and/or other materials
- *       provided with the distribution.
- *     * Neither the name of the NVIDIA CORPORATION nor the names of its contributors may be used
- *       to endorse or promote products derived from this software without specific prior written
- *       permission.
+ * Redistribution and use in source and binary forms, with or without
+ *modification, are permitted provided that the following conditions are met:
+ *     * Redistributions of source code must retain the above copyright notice,
+ *this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *notice, this list of conditions and the following disclaimer in the
+ *documentation and/or other materials provided with the distribution.
+ *     * Neither the name of the NVIDIA CORPORATION nor the names of its
+ *contributors may be used to endorse or promote products derived from this
+ *software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
- * FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL NVIDIA CORPORATION BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TOR (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ *AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ *IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ *DISCLAIMED. IN NO EVENT SHALL NVIDIA CORPORATION BE LIABLE FOR ANY DIRECT,
+ *INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ *DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+ *OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TOR (INCLUDING
+ *NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+ *EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  **************************************************************************************************/
 
@@ -27,7 +29,8 @@
 
 /**
  * \file
- * \brief C++ features that may be otherwise unimplemented for CUDA device functions.
+ * \brief C++ features that may be otherwise unimplemented for CUDA device
+ * functions.
  *
  * This file has three components:
  *
@@ -86,9 +89,10 @@
  *   (4) Functions and types that are STL-like (but aren't in the STL):
  *           - \p TODO: min and max functors?
  *
- * The idea is that, as we drop support for older compilers, we can simply #define
- * the \p __NV_STD_XYZ macros and \p platform namespace to alias their C++
- * counterparts (or trivially find-and-replace their occurrences in code text).
+ * The idea is that, as we drop support for older compilers, we can simply
+ * #define the \p __NV_STD_XYZ macros and \p platform namespace to alias their
+ * C++ counterparts (or trivially find-and-replace their occurrences in code
+ * text).
  */
 
 //-----------------------------------------------------------------------------
@@ -110,7 +114,8 @@
 #include <cstddef>     // nullptr_t
 #include <functional>  // Arithmetic operations
 #include <utility>     // For methods on std::pair
-#if (!defined(_MSC_VER) && (__cplusplus >= 201103L)) || (defined(_MSC_VER) && (_MS_VER >= 1500))
+#if (!defined(_MSC_VER) && (__cplusplus >= 201103L)) || \
+        (defined(_MSC_VER) && (_MS_VER >= 1500))
 #include <type_traits>  // For integral constants, conditional metaprogramming, and type traits
 #endif
 
@@ -121,7 +126,8 @@
 //-----------------------------------------------------------------------------
 // OS
 //-----------------------------------------------------------------------------
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+#if defined(WIN32) || defined(_WIN32) || \
+        defined(__WIN32) && !defined(__CYGWIN__)
 #define CUTLASS_OS_WINDOWS
 #endif
 
@@ -133,7 +139,8 @@
 //-----------------------------------------------------------------------------
 
 /// noexcept, constexpr
-#if (!defined(_MSC_VER) && (__cplusplus < 201103L)) || (defined(_MSC_VER) && (_MSC_VER < 1900))
+#if (!defined(_MSC_VER) && (__cplusplus < 201103L)) || \
+        (defined(_MSC_VER) && (_MSC_VER < 1900))
 #ifndef noexcept
 #define noexcept
 #endif
@@ -143,18 +150,21 @@
 #endif
 
 /// nullptr
-#if (!defined(_MSC_VER) && (__cplusplus < 201103L)) || (defined(_MSC_VER) && (_MSC_VER < 1310))
+#if (!defined(_MSC_VER) && (__cplusplus < 201103L)) || \
+        (defined(_MSC_VER) && (_MSC_VER < 1310))
 #ifndef nullptr
 #define nullptr 0
 #endif
 #endif
 
 /// static_assert
-#if (!defined(_MSC_VER) && (__cplusplus < 201103L)) || (defined(_MSC_VER) && (_MSC_VER < 1600))
+#if (!defined(_MSC_VER) && (__cplusplus < 201103L)) || \
+        (defined(_MSC_VER) && (_MSC_VER < 1600))
 #ifndef static_assert
 #define __platform_cat_(a, b) a##b
 #define __platform_cat(a, b) __platform_cat_(a, b)
-#define static_assert(__e, __m) typedef int __platform_cat(AsSeRt, __LINE__)[(__e) ? 1 : -1]
+#define static_assert(__e, __m) typedef int __platform_cat( \
+        AsSeRt, __LINE__)[(__e) ? 1 : -1]
 #endif
 #endif
 
@@ -185,13 +195,13 @@ namespace platform {
 /// std::min
 template <typename T>
 CUTLASS_HOST_DEVICE constexpr const T& min(const T& a, const T& b) {
-  return (b < a) ? b : a;
+    return (b < a) ? b : a;
 }
 
 /// std::max
 template <typename T>
 CUTLASS_HOST_DEVICE constexpr const T& max(const T& a, const T& b) {
-  return (a < b) ? b : a;
+    return (a < b) ? b : a;
 }
 
 #if !defined(__CUDACC_RTC__)
@@ -202,42 +212,50 @@ CUTLASS_HOST_DEVICE constexpr const T& max(const T& a, const T& b) {
 using std::pair;
 
 template <class T1, class T2>
-CUTLASS_HOST_DEVICE constexpr bool operator==(const pair<T1, T2>& lhs, const pair<T1, T2>& rhs) {
-  return (lhs.first == rhs.first) && (lhs.second == rhs.second);
+CUTLASS_HOST_DEVICE constexpr bool operator==(const pair<T1, T2>& lhs,
+                                              const pair<T1, T2>& rhs) {
+    return (lhs.first == rhs.first) && (lhs.second == rhs.second);
 }
 
 template <class T1, class T2>
-CUTLASS_HOST_DEVICE constexpr bool operator!=(const pair<T1, T2>& lhs, const pair<T1, T2>& rhs) {
-  return (lhs.first != rhs.first) && (lhs.second != rhs.second);
+CUTLASS_HOST_DEVICE constexpr bool operator!=(const pair<T1, T2>& lhs,
+                                              const pair<T1, T2>& rhs) {
+    return (lhs.first != rhs.first) && (lhs.second != rhs.second);
 }
 
 template <class T1, class T2>
-CUTLASS_HOST_DEVICE constexpr bool operator<(const pair<T1, T2>& lhs, const pair<T1, T2>& rhs) {
-  return (lhs.first < rhs.first) ? true : (rhs.first < lhs.first) ? false
-                                                                  : (lhs.second < rhs.second);
+CUTLASS_HOST_DEVICE constexpr bool operator<(const pair<T1, T2>& lhs,
+                                             const pair<T1, T2>& rhs) {
+    return (lhs.first < rhs.first)
+                   ? true
+                   : (rhs.first < lhs.first) ? false
+                                             : (lhs.second < rhs.second);
 }
 
 template <class T1, class T2>
-CUTLASS_HOST_DEVICE constexpr bool operator<=(const pair<T1, T2>& lhs, const pair<T1, T2>& rhs) {
-  return !(rhs < lhs);
+CUTLASS_HOST_DEVICE constexpr bool operator<=(const pair<T1, T2>& lhs,
+                                              const pair<T1, T2>& rhs) {
+    return !(rhs < lhs);
 }
 
 template <class T1, class T2>
-CUTLASS_HOST_DEVICE constexpr bool operator>(const pair<T1, T2>& lhs, const pair<T1, T2>& rhs) {
-  return (rhs < lhs);
+CUTLASS_HOST_DEVICE constexpr bool operator>(const pair<T1, T2>& lhs,
+                                             const pair<T1, T2>& rhs) {
+    return (rhs < lhs);
 }
 
 template <class T1, class T2>
-CUTLASS_HOST_DEVICE constexpr bool operator>=(const pair<T1, T2>& lhs, const pair<T1, T2>& rhs) {
-  return !(lhs < rhs);
+CUTLASS_HOST_DEVICE constexpr bool operator>=(const pair<T1, T2>& lhs,
+                                              const pair<T1, T2>& rhs) {
+    return !(lhs < rhs);
 }
 
 template <class T1, class T2>
 CUTLASS_HOST_DEVICE std::pair<T1, T2> make_pair(T1 t, T2 u) {
-  std::pair<T1, T2> retval;
-  retval.first = t;
-  retval.second = u;
-  return retval;
+    std::pair<T1, T2> retval;
+    retval.first = t;
+    retval.second = u;
+    return retval;
 }
 #endif
 
@@ -253,7 +271,9 @@ namespace platform {
 // Integral constant helper types <type_traits>
 //-----------------------------------------------------------------------------
 
-#if defined(__CUDACC_RTC__) || (!defined(_MSC_VER) && (__cplusplus < 201103L)) || (defined(_MSC_VER) && (_MSC_VER < 1500))
+#if defined(__CUDACC_RTC__) ||                             \
+        (!defined(_MSC_VER) && (__cplusplus < 201103L)) || \
+        (defined(_MSC_VER) && (_MSC_VER < 1500))
 
 /// std::integral_constant
 template <typename value_t, value_t V>
@@ -262,14 +282,14 @@ struct integral_constant;
 /// std::integral_constant
 template <typename value_t, value_t V>
 struct integral_constant {
-  static const value_t value = V;
+    static const value_t value = V;
 
-  typedef value_t value_type;
-  typedef integral_constant<value_t, V> type;
+    typedef value_t value_type;
+    typedef integral_constant<value_t, V> type;
 
-  CUTLASS_HOST_DEVICE operator value_type() const { return value; }
+    CUTLASS_HOST_DEVICE operator value_type() const { return value; }
 
-  CUTLASS_HOST_DEVICE const value_type operator()() const { return value; }
+    CUTLASS_HOST_DEVICE const value_type operator()() const { return value; }
 };
 
 #else
@@ -285,7 +305,9 @@ typedef integral_constant<bool, true> true_type;
 /// The type used as a compile-time boolean with false value.
 typedef integral_constant<bool, false> false_type;
 
-#if defined(__CUDACC_RTC__) || (!defined(_MSC_VER) && (__cplusplus <= 201402L)) || (defined(_MSC_VER) && (_MSC_VER < 1900))
+#if defined(__CUDACC_RTC__) ||                              \
+        (!defined(_MSC_VER) && (__cplusplus <= 201402L)) || \
+        (defined(_MSC_VER) && (_MSC_VER < 1900))
 
 /// std::bool_constant
 template <bool V>
@@ -297,7 +319,9 @@ using std::bool_constant;
 
 #endif
 
-#if defined(__CUDACC_RTC__) || (!defined(_MSC_VER) && (__cplusplus < 201103L)) || (defined(_MSC_VER) && (_MSC_VER < 1700))
+#if defined(__CUDACC_RTC__) ||                             \
+        (!defined(_MSC_VER) && (__cplusplus < 201103L)) || \
+        (defined(_MSC_VER) && (_MSC_VER < 1700))
 
 /// std::nullptr_t
 struct nullptr_t {};
@@ -312,12 +336,14 @@ using std::nullptr_t;
 // Conditional metaprogramming <type_traits>
 //-----------------------------------------------------------------------------
 
-#if defined(__CUDACC_RTC__) || (!defined(_MSC_VER) && (__cplusplus < 201103L)) || (defined(_MSC_VER) && (_MSC_VER < 1600))
+#if defined(__CUDACC_RTC__) ||                             \
+        (!defined(_MSC_VER) && (__cplusplus < 201103L)) || \
+        (defined(_MSC_VER) && (_MSC_VER < 1600))
 
 /// std::enable_if (true specialization)
 template <bool C, typename T = void>
 struct enable_if {
-  typedef T type;
+    typedef T type;
 };
 
 /// std::enable_if (false specialization)
@@ -327,19 +353,19 @@ struct enable_if<false, T> {};
 /// std::conditional (true specialization)
 template <bool B, class T, class F>
 struct conditional {
-  typedef T type;
+    typedef T type;
 };
 
 /// std::conditional (false specialization)
 template <class T, class F>
 struct conditional<false, T, F> {
-  typedef F type;
+    typedef F type;
 };
 
 #else
 
-using std::enable_if;
 using std::conditional;
+using std::enable_if;
 
 #endif
 
@@ -347,43 +373,45 @@ using std::conditional;
 // Const/volatility specifiers <type_traits>
 //-----------------------------------------------------------------------------
 
-#if defined(__CUDACC_RTC__) || (!defined(_MSC_VER) && (__cplusplus < 201103L)) || (defined(_MSC_VER) && (_MSC_VER < 1500))
+#if defined(__CUDACC_RTC__) ||                             \
+        (!defined(_MSC_VER) && (__cplusplus < 201103L)) || \
+        (defined(_MSC_VER) && (_MSC_VER < 1500))
 
 /// std::remove_const (non-const specialization)
 template <typename T>
 struct remove_const {
-  typedef T type;
+    typedef T type;
 };
 
 /// std::remove_const (const specialization)
 template <typename T>
 struct remove_const<const T> {
-  typedef T type;
+    typedef T type;
 };
 
 /// std::remove_volatile (non-volatile specialization)
 template <typename T>
 struct remove_volatile {
-  typedef T type;
+    typedef T type;
 };
 
 /// std::remove_volatile (volatile specialization)
 template <typename T>
 struct remove_volatile<volatile T> {
-  typedef T type;
+    typedef T type;
 };
 
 /// std::remove_cv
 template <typename T>
 struct remove_cv {
-  typedef typename remove_volatile<typename remove_const<T>::type>::type type;
+    typedef typename remove_volatile<typename remove_const<T>::type>::type type;
 };
 
 #else
 
 using std::remove_const;
-using std::remove_volatile;
 using std::remove_cv;
+using std::remove_volatile;
 
 #endif
 
@@ -391,7 +419,9 @@ using std::remove_cv;
 // Type relationships <type_traits>
 //-----------------------------------------------------------------------------
 
-#if defined(__CUDACC_RTC__) || (!defined(_MSC_VER) && (__cplusplus < 201103L)) || (defined(_MSC_VER) && (_MSC_VER < 1500))
+#if defined(__CUDACC_RTC__) ||                             \
+        (!defined(_MSC_VER) && (__cplusplus < 201103L)) || \
+        (defined(_MSC_VER) && (_MSC_VER < 1500))
 
 /// std::is_same (false specialization)
 template <typename A, typename B>
@@ -404,36 +434,39 @@ struct is_same<A, A> : true_type {};
 /// Helper for std::is_base_of
 template <typename BaseT, typename DerivedT>
 struct is_base_of_helper {
-  typedef char (&yes)[1];
-  typedef char (&no)[2];
+    typedef char (&yes)[1];
+    typedef char (&no)[2];
 
-  template <typename B, typename D>
-  struct dummy {
-    CUTLASS_HOST_DEVICE operator B*() const;
-    CUTLASS_HOST_DEVICE operator D*();
-  };
+    template <typename B, typename D>
+    struct dummy {
+        CUTLASS_HOST_DEVICE operator B*() const;
+        CUTLASS_HOST_DEVICE operator D*();
+    };
 
-  template <typename T>
-  CUTLASS_HOST_DEVICE static yes check(DerivedT*, T);
+    template <typename T>
+    CUTLASS_HOST_DEVICE static yes check(DerivedT*, T);
 
-  CUTLASS_HOST_DEVICE static no check(BaseT*, int);
+    CUTLASS_HOST_DEVICE static no check(BaseT*, int);
 
-  static const bool value = sizeof(check(dummy<BaseT, DerivedT>(), int())) == sizeof(yes);
+    static const bool value =
+            sizeof(check(dummy<BaseT, DerivedT>(), int())) == sizeof(yes);
 };
 
 /// std::is_base_of
 template <typename BaseT, typename DerivedT>
 struct is_base_of
-    : integral_constant<bool,
-                        (is_base_of_helper<typename remove_cv<BaseT>::type,
-                                           typename remove_cv<DerivedT>::type>::value) ||
-                            (is_same<typename remove_cv<BaseT>::type,
-                                     typename remove_cv<DerivedT>::type>::value)> {};
+        : integral_constant<
+                  bool, (is_base_of_helper<
+                                typename remove_cv<BaseT>::type,
+                                typename remove_cv<DerivedT>::type>::value) ||
+                                (is_same<typename remove_cv<BaseT>::type,
+                                         typename remove_cv<DerivedT>::type>::
+                                         value)> {};
 
 #else
 
-using std::is_same;
 using std::is_base_of;
+using std::is_same;
 
 #endif
 
@@ -441,7 +474,9 @@ using std::is_base_of;
 // Type properties <type_traits>
 //-----------------------------------------------------------------------------
 
-#if defined(__CUDACC_RTC__) || (!defined(_MSC_VER) && (__cplusplus < 201103L)) || (defined(_MSC_VER) && (_MSC_VER < 1500))
+#if defined(__CUDACC_RTC__) ||                             \
+        (!defined(_MSC_VER) && (__cplusplus < 201103L)) || \
+        (defined(_MSC_VER) && (_MSC_VER < 1500))
 
 /// std::is_volatile
 template <typename T>
@@ -500,50 +535,56 @@ struct is_integral<const volatile T> : is_integral<T> {};
 /// std::is_floating_point
 template <typename T>
 struct is_floating_point
-    : integral_constant<bool,
-                        (is_same<float, typename remove_cv<T>::type>::value ||
-                         is_same<double, typename remove_cv<T>::type>::value)> {};
+        : integral_constant<
+                  bool, (is_same<float, typename remove_cv<T>::type>::value ||
+                         is_same<double, typename remove_cv<T>::type>::value)> {
+};
 
 /// std::is_arithmetic
 template <typename T>
-struct is_arithmetic
-    : integral_constant<bool, (is_integral<T>::value || is_floating_point<T>::value)> {};
+struct is_arithmetic : integral_constant<bool, (is_integral<T>::value ||
+                                                is_floating_point<T>::value)> {
+};
 
 /// std::is_fundamental
 template <typename T>
 struct is_fundamental
-    : integral_constant<bool,
-                        (is_arithmetic<T>::value || is_void<T>::value ||
-                         is_same<nullptr_t, typename remove_cv<T>::type>::value)> {};
+        : integral_constant<
+                  bool,
+                  (is_arithmetic<T>::value || is_void<T>::value ||
+                   is_same<nullptr_t, typename remove_cv<T>::type>::value)> {};
 
 #else
 
-using std::is_volatile;
+using std::is_arithmetic;
+using std::is_floating_point;
+using std::is_fundamental;
+using std::is_integral;
 using std::is_pointer;
 using std::is_void;
-using std::is_integral;
-using std::is_floating_point;
-using std::is_arithmetic;
-using std::is_fundamental;
+using std::is_volatile;
 
 #endif
 
-#if defined(__CUDACC_RTC__) || (!defined(_MSC_VER) && (__cplusplus < 201103L)) || (defined(_MSC_VER) && (_MSC_VER < 1800)) || \
-    (defined(__GNUG__) && (__GNUC__ < 5))
+#if defined(__CUDACC_RTC__) ||                             \
+        (!defined(_MSC_VER) && (__cplusplus < 201103L)) || \
+        (defined(_MSC_VER) && (_MSC_VER < 1800)) ||        \
+        (defined(__GNUG__) && (__GNUC__ < 5))
 
 /**
-     * std::is_trivially_copyable
-     *
-     * This implementation only evaluates true if T is fundamental or pointer
-     *
-     * Without help from partial template specializations provided by the user for
-     * a specific class or struct, this trait will never report that the specified
-     * class or struct  is trivially-copyable ; this is always safe,
-     * if possibly sub-optimal.
-     */
+ * std::is_trivially_copyable
+ *
+ * This implementation only evaluates true if T is fundamental or pointer
+ *
+ * Without help from partial template specializations provided by the user for
+ * a specific class or struct, this trait will never report that the specified
+ * class or struct  is trivially-copyable ; this is always safe,
+ * if possibly sub-optimal.
+ */
 template <typename T>
 struct is_trivially_copyable
-    : integral_constant<bool, (is_fundamental<T>::value || is_pointer<T>::value)> {};
+        : integral_constant<bool, (is_fundamental<T>::value ||
+                                   is_pointer<T>::value)> {};
 
 #else
 
@@ -555,17 +596,19 @@ using std::is_trivially_copyable;
 // Alignment and layout utilities
 //-----------------------------------------------------------------------------
 
-#if defined(__CUDACC_RTC__) || (!defined(_MSC_VER) && (__cplusplus < 201103L)) || (defined(_MSC_VER) && (_MSC_VER < 1500))
+#if defined(__CUDACC_RTC__) ||                             \
+        (!defined(_MSC_VER) && (__cplusplus < 201103L)) || \
+        (defined(_MSC_VER) && (_MSC_VER < 1500))
 
 /// std::alignment_of
 template <typename value_t>
 struct alignment_of {
-  struct pad {
-    value_t val;
-    char byte;
-  };
+    struct pad {
+        value_t val;
+        char byte;
+    };
 
-  enum { value = sizeof(pad) - sizeof(value_t) };
+    enum { value = sizeof(pad) - sizeof(value_t) };
 };
 
 #else
@@ -575,50 +618,51 @@ struct alignment_of : std::alignment_of<value_t> {};
 
 #endif
 
-/* 16B specializations where 32-bit Win32 host compiler disagrees with device compiler */
+/* 16B specializations where 32-bit Win32 host compiler disagrees with device
+ * compiler */
 template <>
 struct alignment_of<int4> {
-  enum { value = 16 };
+    enum { value = 16 };
 };
 template <>
 struct alignment_of<uint4> {
-  enum { value = 16 };
+    enum { value = 16 };
 };
 template <>
 struct alignment_of<float4> {
-  enum { value = 16 };
+    enum { value = 16 };
 };
 template <>
 struct alignment_of<long4> {
-  enum { value = 16 };
+    enum { value = 16 };
 };
 template <>
 struct alignment_of<ulong4> {
-  enum { value = 16 };
+    enum { value = 16 };
 };
 template <>
 struct alignment_of<longlong2> {
-  enum { value = 16 };
+    enum { value = 16 };
 };
 template <>
 struct alignment_of<ulonglong2> {
-  enum { value = 16 };
+    enum { value = 16 };
 };
 template <>
 struct alignment_of<double2> {
-  enum { value = 16 };
+    enum { value = 16 };
 };
 template <>
 struct alignment_of<longlong4> {
-  enum { value = 16 };
+    enum { value = 16 };
 };
 template <>
 struct alignment_of<ulonglong4> {
-  enum { value = 16 };
+    enum { value = 16 };
 };
 template <>
 struct alignment_of<double4> {
-  enum { value = 16 };
+    enum { value = 16 };
 };
 
 // Specializations for volatile/const qualified types
@@ -629,67 +673,69 @@ struct alignment_of<const value_t> : alignment_of<value_t> {};
 template <typename value_t>
 struct alignment_of<const volatile value_t> : alignment_of<value_t> {};
 
-#if defined(__CUDACC_RTC__) || (!defined(_MSC_VER) && (__cplusplus < 201103L)) || (defined(_MSC_VER) && (_MSC_VER < 1800))
+#if defined(__CUDACC_RTC__) ||                             \
+        (!defined(_MSC_VER) && (__cplusplus < 201103L)) || \
+        (defined(_MSC_VER) && (_MSC_VER < 1800))
 
 template <size_t Align>
 struct aligned_chunk;
 template <>
 struct __align__(1) aligned_chunk<1> {
-  uint8_t buff;
+    uint8_t buff;
 };
 template <>
 struct __align__(2) aligned_chunk<2> {
-  uint16_t buff;
+    uint16_t buff;
 };
 template <>
 struct __align__(4) aligned_chunk<4> {
-  uint32_t buff;
+    uint32_t buff;
 };
 template <>
 struct __align__(8) aligned_chunk<8> {
-  uint32_t buff[2];
+    uint32_t buff[2];
 };
 template <>
 struct __align__(16) aligned_chunk<16> {
-  uint32_t buff[4];
+    uint32_t buff[4];
 };
 template <>
 struct __align__(32) aligned_chunk<32> {
-  uint32_t buff[8];
+    uint32_t buff[8];
 };
 template <>
 struct __align__(64) aligned_chunk<64> {
-  uint32_t buff[16];
+    uint32_t buff[16];
 };
 template <>
 struct __align__(128) aligned_chunk<128> {
-  uint32_t buff[32];
+    uint32_t buff[32];
 };
 template <>
 struct __align__(256) aligned_chunk<256> {
-  uint32_t buff[64];
+    uint32_t buff[64];
 };
 template <>
 struct __align__(512) aligned_chunk<512> {
-  uint32_t buff[128];
+    uint32_t buff[128];
 };
 template <>
 struct __align__(1024) aligned_chunk<1024> {
-  uint32_t buff[256];
+    uint32_t buff[256];
 };
 template <>
 struct __align__(2048) aligned_chunk<2048> {
-  uint32_t buff[512];
+    uint32_t buff[512];
 };
 template <>
 struct __align__(4096) aligned_chunk<4096> {
-  uint32_t buff[1024];
+    uint32_t buff[1024];
 };
 
 /// std::aligned_storage
 template <size_t Len, size_t Align>
 struct aligned_storage {
-  typedef aligned_chunk<Align> type[Len / sizeof(aligned_chunk<Align>)];
+    typedef aligned_chunk<Align> type[Len / sizeof(aligned_chunk<Align>)];
 };
 
 #else
@@ -702,84 +748,85 @@ using std::aligned_storage;
 /// Default deleter
 template <typename T>
 struct default_delete {
-  void operator()(T* ptr) const { delete ptr; }
+    void operator()(T* ptr) const { delete ptr; }
 };
 
 /// Partial specialization for deleting array types
 template <typename T>
 struct default_delete<T[]> {
-  void operator()(T* ptr) const { delete[] ptr; }
+    void operator()(T* ptr) const { delete[] ptr; }
 };
 
 /// std::unique_ptr
 template <class T, class Deleter = default_delete<T> >
 class unique_ptr {
- public:
-  typedef T* pointer;
-  typedef T element_type;
-  typedef Deleter deleter_type;
+public:
+    typedef T* pointer;
+    typedef T element_type;
+    typedef Deleter deleter_type;
 
- private:
-  /// Pointer to memory
-  pointer _ptr;
+private:
+    /// Pointer to memory
+    pointer _ptr;
 
-  /// Deleter
-  deleter_type _deleter;
+    /// Deleter
+    deleter_type _deleter;
 
- public:
-  unique_ptr() : _ptr(nullptr) {}
-  unique_ptr(pointer p) : _ptr(p) {}
+public:
+    unique_ptr() : _ptr(nullptr) {}
+    unique_ptr(pointer p) : _ptr(p) {}
 
-  ~unique_ptr() {
-    if (_ptr) {
-      _deleter(_ptr);
+    ~unique_ptr() {
+        if (_ptr) {
+            _deleter(_ptr);
+        }
     }
-  }
-  /// Returns a pointer to the managed object or nullptr if no object is owned.
-  pointer get() const noexcept { return _ptr; }
+    /// Returns a pointer to the managed object or nullptr if no object is
+    /// owned.
+    pointer get() const noexcept { return _ptr; }
 
-  /// Releases ownership of the managed object, if any
-  pointer release() noexcept {
-    pointer p(_ptr);
-    _ptr = nullptr;
-    return p;
-  }
-
-  /// Replaces the managed object, deleting the old object.
-  void reset(pointer p = pointer()) noexcept {
-    pointer old_ptr = _ptr;
-    _ptr = p;
-    if (old_ptr != nullptr) {
-      get_deleter()(old_ptr);
+    /// Releases ownership of the managed object, if any
+    pointer release() noexcept {
+        pointer p(_ptr);
+        _ptr = nullptr;
+        return p;
     }
-  }
 
-  /// Swaps the managed objects with *this and another unique_ptr
-  void swap(unique_ptr& other) noexcept { std::swap(_ptr, other._ptr); }
+    /// Replaces the managed object, deleting the old object.
+    void reset(pointer p = pointer()) noexcept {
+        pointer old_ptr = _ptr;
+        _ptr = p;
+        if (old_ptr != nullptr) {
+            get_deleter()(old_ptr);
+        }
+    }
 
-  /// Returns the deleter object
-  Deleter& get_deleter() noexcept { return _deleter; }
+    /// Swaps the managed objects with *this and another unique_ptr
+    void swap(unique_ptr& other) noexcept { std::swap(_ptr, other._ptr); }
 
-  /// Returns the deleter object
-  Deleter const& get_deleter() const noexcept { return _deleter; }
+    /// Returns the deleter object
+    Deleter& get_deleter() noexcept { return _deleter; }
 
-  /// Checks whether an object is owned
-  operator bool() const noexcept { return _ptr != nullptr; }
+    /// Returns the deleter object
+    Deleter const& get_deleter() const noexcept { return _deleter; }
 
-  /// Dereferences the unique_ptr
-  T& operator*() const { return *_ptr; }
+    /// Checks whether an object is owned
+    operator bool() const noexcept { return _ptr != nullptr; }
 
-  /// Returns a pointer to the managed object
-  pointer operator->() const noexcept { return _ptr; }
+    /// Dereferences the unique_ptr
+    T& operator*() const { return *_ptr; }
 
-  /// Array access to managed object
-  T& operator[](size_t i) const { return _ptr[i]; }
+    /// Returns a pointer to the managed object
+    pointer operator->() const noexcept { return _ptr; }
+
+    /// Array access to managed object
+    T& operator[](size_t i) const { return _ptr[i]; }
 };
 
 /// Specializes the swap algorithm
 template <typename T, typename Deleter>
 void swap(unique_ptr<T, Deleter>& lhs, unique_ptr<T, Deleter>& rhs) noexcept {
-  lhs.swap(rhs);
+    lhs.swap(rhs);
 }
 #endif
 

@@ -31,4 +31,5 @@ cutlass_test_unit_add_executable(
   epilogue_volta_tensor_op.cu
   epilogue_wmma_tensor_op_sm70.cu
   epilogue_planar_complex.cu
+  bias_add_epilogue_simt_sm61.cu
 )

@@ -1,29 +1,32 @@
 /***************************************************************************************************
  * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without modification, are permitted
- * provided that the following conditions are met:
- *     * Redistributions of source code must retain the above copyright notice, this list of
- *       conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright notice, this list of
- *       conditions and the following disclaimer in the documentation and/or other materials
- *       provided with the distribution.
- *     * Neither the name of the NVIDIA CORPORATION nor the names of its contributors may be used
- *       to endorse or promote products derived from this software without specific prior written
- *       permission.
+ * Redistribution and use in source and binary forms, with or without
+ *modification, are permitted provided that the following conditions are met:
+ *     * Redistributions of source code must retain the above copyright notice,
+ *this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *notice, this list of conditions and the following disclaimer in the
+ *documentation and/or other materials provided with the distribution.
+ *     * Neither the name of the NVIDIA CORPORATION nor the names of its
+ *contributors may be used to endorse or promote products derived from this
+ *software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
- * FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL NVIDIA CORPORATION BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TOR (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ *AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ *IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ *DISCLAIMED. IN NO EVENT SHALL NVIDIA CORPORATION BE LIABLE FOR ANY DIRECT,
+ *INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ *DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+ *OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TOR (INCLUDING
+ *NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+ *EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  **************************************************************************************************/
 /*! \file
-    \brief Templates exposing architecture support for warp matrix multiply-add (WMMA) operations
+    \brief Templates exposing architecture support for warp matrix multiply-add
+   (WMMA) operations
 */
 
 #pragma once
@@ -52,16 +55,15 @@
 #endif
 #endif
 
-#endif //__clang__
+#endif  //__clang__
 
 #if defined(CUTLASS_ARCH_WMMA_ENABLED)
 
 #include <mma.h>
 #include "cutlass/arch/mma.h"
 #include "cutlass/array.h"
-#include "cutlass/numeric_types.h"
 #include "cutlass/gemm/gemm.h"
-
+#include "cutlass/numeric_types.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -72,52 +74,51 @@ namespace arch {
 /// Statically maps cutlass data types => nvcuda::wmma data types
 /////////////////////////////////////////////////////////////////////////////////////////////////
 template <typename Type_>
-struct CutlassToWmmaDataType{
-  using Type = Type_;
+struct CutlassToWmmaDataType {
+    using Type = Type_;
 };
 
 /// Statically maps cutlass::half_t => __half
-template<>
+template <>
 struct CutlassToWmmaDataType<cutlass::half_t> {
-  using Type = __half;
+    using Type = __half;
 };
 
-
 /// Statically maps int8_t => char
-template<>
+template <>
 struct CutlassToWmmaDataType<int8_t> {
-  using Type = signed char;
+    using Type = signed char;
 };
 
 /// Statically maps uint8_t => char
-template<>
+template <>
 struct CutlassToWmmaDataType<uint8_t> {
-  using Type = unsigned char;
+    using Type = unsigned char;
 };
 
 /// Statically maps int32_t => int
-template<>
+template <>
 struct CutlassToWmmaDataType<int32_t> {
-  using Type = int;
+    using Type = int;
 };
 
 #if defined(CUTLASS_SUBBYTE_INTEGER_MATRIX_MULTIPLY_ENABLED)
 /// Statically maps cutlass::int4b_t => experimental::precision::s4
-template<>
+template <>
 struct CutlassToWmmaDataType<cutlass::int4b_t> {
-  using Type = nvcuda::wmma::experimental::precision::s4;
+    using Type = nvcuda::wmma::experimental::precision::s4;
 };
 
 /// Statically maps cutlass::uint4b_t => experimental::precision::s4
-template<>
+template <>
 struct CutlassToWmmaDataType<cutlass::uint4b_t> {
-  using Type = nvcuda::wmma::experimental::precision::u4;
+    using Type = nvcuda::wmma::experimental::precision::u4;
 };
 
 /// Statically maps cutlass::uint1b_t => experimental::precision::b1
-template<>
+template <>
 struct CutlassToWmmaDataType<cutlass::uint1b_t> {
-  using Type = nvcuda::wmma::experimental::precision::b1;
+    using Type = nvcuda::wmma::experimental::precision::b1;
 };
 #endif
 
@@ -125,23 +126,26 @@ struct CutlassToWmmaDataType<cutlass::uint1b_t> {
 /// Statically maps cutlass::layout => nvcuda::wmma layout tags
 ////////////////////////////////////////////////////////////////////////////////////////////////
 template <typename Layout_>
-struct CutlassToWmmaLayout {
-};
+struct CutlassToWmmaLayout {};
 
-/// Statically maps cutlass::layout::RowMajor => nvcuda::wmma::row_major layout tags
+/// Statically maps cutlass::layout::RowMajor => nvcuda::wmma::row_major layout
+/// tags
 template <>
 struct CutlassToWmmaLayout<cutlass::layout::RowMajor> {
-  using Layout = nvcuda::wmma::row_major;
-  static nvcuda::wmma::layout_t const value = nvcuda::wmma::layout_t::mem_row_major;
+    using Layout = nvcuda::wmma::row_major;
+    static nvcuda::wmma::layout_t const value =
+            nvcuda::wmma::layout_t::mem_row_major;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
-/// Statically maps cutlass::layout::RowMajor => nvcuda::wmma::row_major layout tags
+/// Statically maps cutlass::layout::RowMajor => nvcuda::wmma::row_major layout
+/// tags
 ////////////////////////////////////////////////////////////////////////////////////////////////
 template <>
 struct CutlassToWmmaLayout<cutlass::layout::ColumnMajor> {
-  using Layout = nvcuda::wmma::col_major;
-  static nvcuda::wmma::layout_t const value = nvcuda::wmma::layout_t::mem_col_major;
+    using Layout = nvcuda::wmma::col_major;
+    static nvcuda::wmma::layout_t const value =
+            nvcuda::wmma::layout_t::mem_col_major;
 };
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -149,37 +153,38 @@ struct CutlassToWmmaLayout<cutlass::layout::ColumnMajor> {
 /// Statically maps nvcuda::wmma data types => cutlass data types
 /////////////////////////////////////////////////////////////////////////////////////////////////
 template <typename Type_>
-struct WmmaToCutlassDataType{
-  using Type = Type_;
+struct WmmaToCutlassDataType {
+    using Type = Type_;
 };
 
 /// Statically maps __half => cutlass::half_t
-template<>
+template <>
 struct WmmaToCutlassDataType<__half> {
-  using Type = cutlass::half_t;
+    using Type = cutlass::half_t;
 };
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
-// WMMA template structure defines nvcuda::wmma::fragments and static assertion chaeks
-// for a specific template paramterized data type (Element[A|B|C]), layout (Layout[A|B|C]), 
-// and native wmma size (Shape)
+// WMMA template structure defines nvcuda::wmma::fragments and static assertion
+// chaeks for a specific template paramterized data type (Element[A|B|C]),
+// layout (Layout[A|B|C]), and native wmma size (Shape)
 /////////////////////////////////////////////////////////////////////////////////////////////////
-template <  
-  typename Shape_,                                   ///< Size of the matrix product (concept: GemmShape)
-  typename ElementA_,                                ///< Data type of A elements 
-  typename LayoutA_,                                 ///< Layout of A matrix (concept: MatrixLayout)  
-  typename ElementB_,                                ///< Data type of B elements
-  typename LayoutB_,                                 ///< Layout of B matrix (concept: MatrixLayout)  
-  typename ElementC_,                                ///< Element type of C matrix  
-  typename LayoutC_,                                 /// Layout of C matrix (concept: MatrixLayout)
-  typename Operator_ = cutlass::arch::OpMultiplyAdd   ///< Inner product operator (multiply-add, xor.popc)
->
+template <typename Shape_,  ///< Size of the matrix product (concept: GemmShape)
+          typename ElementA_,  ///< Data type of A elements
+          typename LayoutA_,   ///< Layout of A matrix (concept: MatrixLayout)
+          typename ElementB_,  ///< Data type of B elements
+          typename LayoutB_,   ///< Layout of B matrix (concept: MatrixLayout)
+          typename ElementC_,  ///< Element type of C matrix
+          typename LayoutC_,   /// Layout of C matrix (concept: MatrixLayout)
+          typename Operator_ =
+                  cutlass::arch::OpMultiplyAdd  ///< Inner product operator
+                                                ///< (multiply-add, xor.popc)
+          >
 struct Wmma;
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
-} // namespace arch
-} // namespace cutlass
+}  // namespace arch
+}  // namespace cutlass
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -200,4 +205,4 @@ struct Wmma;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
-#endif //CUTLASS_ARCH_WMMA_ENABLED
+#endif  // CUTLASS_ARCH_WMMA_ENABLED

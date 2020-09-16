@@ -1,30 +1,32 @@
 /***************************************************************************************************
  * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without modification, are permitted
- * provided that the following conditions are met:
- *     * Redistributions of source code must retain the above copyright notice, this list of
- *       conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright notice, this list of
- *       conditions and the following disclaimer in the documentation and/or other materials
- *       provided with the distribution.
- *     * Neither the name of the NVIDIA CORPORATION nor the names of its contributors may be used
- *       to endorse or promote products derived from this software without specific prior written
- *       permission.
+ * Redistribution and use in source and binary forms, with or without
+ *modification, are permitted provided that the following conditions are met:
+ *     * Redistributions of source code must retain the above copyright notice,
+ *this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *notice, this list of conditions and the following disclaimer in the
+ *documentation and/or other materials provided with the distribution.
+ *     * Neither the name of the NVIDIA CORPORATION nor the names of its
+ *contributors may be used to endorse or promote products derived from this
+ *software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
- * FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL NVIDIA CORPORATION BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TOR (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ *AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ *IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ *DISCLAIMED. IN NO EVENT SHALL NVIDIA CORPORATION BE LIABLE FOR ANY DIRECT,
+ *INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ *DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+ *OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TOR (INCLUDING
+ *NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+ *EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  **************************************************************************************************/
 /*! \file
-    \brief Statically sized array of elements that accommodates all CUTLASS-supported numeric types
-           and is safe to use in a union.
+    \brief Statically sized array of elements that accommodates all
+   CUTLASS-supported numeric types and is safe to use in a union.
 */
 
 #include "../common/cutlass_unit_test.h"
@@ -40,42 +42,39 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 TEST(half_t, host_conversion) {
-  for (int i = -1024; i < 1024; ++i) {
-    float f = static_cast<float>(i);
+    for (int i = -1024; i < 1024; ++i) {
+        float f = static_cast<float>(i);
 
-    cutlass::half_t x = static_cast<cutlass::half_t>(i);
-    cutlass::half_t y = static_cast<cutlass::half_t>(f);
+        cutlass::half_t x = static_cast<cutlass::half_t>(i);
+        cutlass::half_t y = static_cast<cutlass::half_t>(f);
 
-    EXPECT_TRUE(static_cast<int>(x) == i);
-    EXPECT_TRUE(static_cast<float>(y) == f);
-  }
+        EXPECT_TRUE(static_cast<int>(x) == i);
+        EXPECT_TRUE(static_cast<float>(y) == f);
+    }
 
-  // Try out user-defined literals
-  EXPECT_TRUE(cutlass::half_t(7) == 7_hf);
-  EXPECT_TRUE(7 == static_cast<int>(7_hf));
+    // Try out user-defined literals
+    EXPECT_TRUE(cutlass::half_t(7) == 7_hf);
+    EXPECT_TRUE(7 == static_cast<int>(7_hf));
 }
 
 TEST(half_t, host_arithmetic) {
+    for (int i = -100; i < 100; ++i) {
+        for (int j = -100; j < 100; ++j) {
+            cutlass::half_t x = static_cast<cutlass::half_t>(i);
+            cutlass::half_t y = static_cast<cutlass::half_t>(j);
 
-  for (int i = -100; i < 100; ++i) {
-    for (int j = -100; j < 100; ++j) {
-
-      cutlass::half_t x = static_cast<cutlass::half_t>(i);
-      cutlass::half_t y = static_cast<cutlass::half_t>(j);
-
-      EXPECT_TRUE(static_cast<int>(x + y) == (i + j));
+            EXPECT_TRUE(static_cast<int>(x + y) == (i + j));
+        }
     }
-  }
 
-  for (int i = -6; i < 6; ++i) {
-    for (int j = -6; j < 6; ++j) {
+    for (int i = -6; i < 6; ++i) {
+        for (int j = -6; j < 6; ++j) {
+            cutlass::half_t x = static_cast<cutlass::half_t>(i);
+            cutlass::half_t y = static_cast<cutlass::half_t>(j);
 
-      cutlass::half_t x = static_cast<cutlass::half_t>(i);
-      cutlass::half_t y = static_cast<cutlass::half_t>(j);
-
-      EXPECT_TRUE(static_cast<int>(x * y) == (i * j));
+            EXPECT_TRUE(static_cast<int>(x * y) == (i * j));
+        }
     }
-  }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
